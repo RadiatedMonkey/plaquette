@@ -9,9 +9,9 @@ set(SOURCES
 )
 
 
-add_subdirectory(vendor)
+add_subdirectory(vendor/glfw)
 add_subdirectory(vendor/volk)
 
 add_executable(rt ${SOURCES})
 target_include_directories(rt PRIVATE include)
-target_link_libraries(rt PRIVATE volk)
+target_link_libraries(rt PRIVATE volk glfw)
