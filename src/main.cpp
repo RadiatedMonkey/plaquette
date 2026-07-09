@@ -19,58 +19,159 @@ static constexpr const char* ENABLED_INSTANCE_LAYERS[] = {
     "VK_LAYER_KHRONOS_validation"
 };
 
-int main() {
-    int glfwResult = glfwInit();
-    assert(glfwResult == GLFW_TRUE);
+static constexpr const char* ENABLED_DEVICE_EXTENSIONS[] = {
+    "VK_KHR_swapchain"
+};
 
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+class Device {
+public:
+    Device(VkPhysicalDevice adapter, uint32_t queue_family) {
+        float queue_priority = 1.0f;
 
-    GLFWwindow* window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE, nullptr, nullptr);
-    assert(window != nullptr);
+        VkDeviceQueueCreateInfo queue_ci = {};
+        queue_ci.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        queue_ci.queueFamilyIndex = queue_family;
+        queue_ci.queueCount = 1;
+        queue_ci.pQueuePriorities = &queue_priority;
 
-    VkResult result = volkInitialize();
-    assert(result == VK_SUCCESS);
+        VkDeviceCreateInfo device_ci = {};
+        device_ci.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+        device_ci.queueCreateInfoCount = 1;
+        device_ci.pQueueCreateInfos = &queue_ci;
+        device_ci.enabledExtensionCount = std::size(ENABLED_DEVICE_EXTENSIONS);
+        device_ci.ppEnabledExtensionNames = ENABLED_DEVICE_EXTENSIONS;
+        device_ci.enabledLayerCount = 0; // Device layers are deprecated
 
-    VkApplicationInfo app_info = {};
-    app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    app_info.pApplicationName = WINDOW_TITLE;
-    app_info.apiVersion = VK_API_VERSION_1_4;
+        VkResult result = vkCreateDevice(adapter, &device_ci, nullptr, &m_device);
+        if (result != VK_SUCCESS) {
+            throw std::runtime_error("failed to create logical device");
+        }
 
-    VkInstanceCreateInfo instance_info = {};
-    instance_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    instance_info.pApplicationInfo = &app_info;
-    instance_info.enabledExtensionCount = std::size(ENABLED_INSTANCE_EXTENSIONS);
-    instance_info.ppEnabledExtensionNames = ENABLED_INSTANCE_EXTENSIONS;
-    instance_info.enabledLayerCount = std::size(ENABLED_INSTANCE_LAYERS);
-    instance_info.ppEnabledLayerNames = ENABLED_INSTANCE_LAYERS;
-
-    VkInstance instance = VK_NULL_HANDLE;
-    result = vkCreateInstance(&instance_info, nullptr, &instance);
-    assert(result == VK_SUCCESS);
-
-    std::cout << "Created instance" << std::endl;
-
-    volkLoadInstance(instance);
-
-    uint32_t adapter_count = 0;
-    result = vkEnumeratePhysicalDevices(instance, &adapter_count, nullptr);
-    assert(result == VK_SUCCESS);
-
-    auto adapters = std::vector<VkPhysicalDevice>(adapter_count);
-    result = vkEnumeratePhysicalDevices(instance, &adapter_count, adapters.data());
-    assert(result == VK_SUCCESS);
-
-    for (const VkPhysicalDevice& adapter : adapters) {
-        VkPhysicalDeviceProperties properties = {};
-        vkGetPhysicalDeviceProperties(adapter, &properties);
-
-        std::cout << "Adapter name is: " << properties.deviceName << std::endl;
+        std::cout << "Device created" << std::endl;
     }
 
-    vkDestroyInstance(instance, nullptr);
+    ~Device() {
+        if (m_device != VK_NULL_HANDLE) {
+            vkDestroyDevice(m_device, nullptr);
+            m_device = VK_NULL_HANDLE;
 
-    glfwDestroyWindow(window);
-    glfwTerminate();
+            std::cout << "Device destroyed" << std::endl;
+        }
+    }
+
+private:
+    VkDevice m_device = VK_NULL_HANDLE;
+};
+
+class Instance {
+public:
+    Instance() {
+        VkResult result = volkInitialize();
+        if (result != VK_SUCCESS) {
+            throw std::runtime_error("volkInitialize failed");
+        }
+
+        VkApplicationInfo app_info = {};
+        app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+        app_info.pApplicationName = "Relativistic Raytracer";
+        app_info.applicationVersion = 1;
+
+        VkInstanceCreateInfo instance_ci = {};
+        instance_ci.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+        instance_ci.pNext = nullptr;
+        instance_ci.enabledExtensionCount = std::size(ENABLED_INSTANCE_EXTENSIONS);
+        instance_ci.ppEnabledExtensionNames = ENABLED_INSTANCE_EXTENSIONS;
+        instance_ci.enabledLayerCount = std::size(ENABLED_INSTANCE_LAYERS);
+        instance_ci.ppEnabledLayerNames = ENABLED_INSTANCE_LAYERS;
+        instance_ci.pApplicationInfo = &app_info;
+
+        result = vkCreateInstance(&instance_ci, nullptr, &m_instance);
+        if (result != VK_SUCCESS) {
+            throw std::runtime_error("failed to create instance");
+        }
+
+        volkLoadInstance(m_instance);
+
+        std::cout << "Instance created" << std::endl;
+    }
+
+    ~Instance() {
+        if (m_instance != VK_NULL_HANDLE) {
+            vkDestroyInstance(m_instance, nullptr);
+            m_instance = VK_NULL_HANDLE;
+
+            volkFinalize();
+
+            std::cout << "Instance destroyed" << std::endl;
+        }
+    }
+
+    [[nodiscard]]
+    Device requestDevice() const {
+        uint32_t count = 0;
+        VkResult result = vkEnumeratePhysicalDevices(m_instance, &count, nullptr);
+        if (result != VK_SUCCESS) {
+            throw std::runtime_error("failed to enumerate physical devices");
+        }
+
+        if (count == 0) {
+            throw std::runtime_error("no adapters found");
+        }
+
+        std::vector<VkPhysicalDevice> raw_adapters(count);
+        result = vkEnumeratePhysicalDevices(m_instance, &count, raw_adapters.data());
+        if (result != VK_SUCCESS) {
+            throw std::runtime_error("failed to enumerate physical devices");
+        }
+
+        VkPhysicalDevice chosen_adapter = raw_adapters[0];
+        for (VkPhysicalDevice adapter : raw_adapters) {
+            VkPhysicalDeviceProperties properties = {};
+            vkGetPhysicalDeviceProperties(adapter, &properties);
+
+            if (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
+                chosen_adapter = adapter;
+                break;
+            }
+        }
+
+        uint32_t family_count = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(chosen_adapter, &family_count, nullptr);
+
+        std::vector<VkQueueFamilyProperties> families(family_count);
+        vkGetPhysicalDeviceQueueFamilyProperties(chosen_adapter, &family_count, families.data());
+
+        uint32_t chosen_queue = UINT32_MAX;
+        for (uint32_t family = 0; family < family_count; family++) {
+            auto queue = families[family];
+
+            bool supportsCompute = (queue.queueFlags & VK_QUEUE_COMPUTE_BIT) != 0;
+            bool supportsTransfer = (queue.queueFlags & VK_QUEUE_TRANSFER_BIT) != 0;
+
+            if (supportsCompute && supportsTransfer) {
+                chosen_queue = family;
+                break;
+            }
+        }
+
+        if (chosen_queue == UINT32_MAX) {
+            throw std::runtime_error("could not find suitable compute queue");
+        }
+
+        return Device(chosen_adapter, chosen_queue);
+    }
+
+    bool initialized() const noexcept {
+        return m_instance != VK_NULL_HANDLE;
+    }
+
+private:
+    VkInstance m_instance = VK_NULL_HANDLE;
+};
+
+int main() {
+    Instance instance{};
+    Device device = instance.requestDevice();
 
     return 0;
 }
