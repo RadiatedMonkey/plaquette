@@ -1,13 +1,10 @@
 #pragma once
 
+#include <string>
 #include <memory>
 
 #define VK_NO_PROTOTYPES
 #include <vulkan/vulkan.h>
-
-namespace std {
-    class string;
-}
 
 namespace Compute {
     static constexpr const char* COMPUTE_SPV_PATH = "compute.spv";
@@ -26,5 +23,19 @@ namespace Compute {
     private:
         std::shared_ptr<Device> mDevice = nullptr;
         VkShaderModule mModule = VK_NULL_HANDLE;
+    };
+
+    class Pipeline {
+    public:
+        Pipeline(std::shared_ptr<Device> device);
+        ~Pipeline();
+
+    private:
+        void destroyPipelineLayout();
+
+        std::shared_ptr<Device> mDevice = nullptr;
+
+        VkPipelineLayout mLayout = VK_NULL_HANDLE;
+        VkPipeline mPipeline = VK_NULL_HANDLE;
     };
 }
