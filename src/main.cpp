@@ -2,6 +2,7 @@
 #include <memory>
 #include <vector>
 #include <iostream>
+#include <fstream>
 
 #include <GLFW/glfw3.h>
 #include <volk.h>
@@ -9,6 +10,7 @@
 static constexpr int WINDOW_WIDTH = 800;
 static constexpr int WINDOW_HEIGHT = 600;
 static constexpr const char* WINDOW_TITLE = "Relativistic Raytracer";
+static constexpr const char* COMPUTE_SPV_PATH = "compute.spv";
 
 static constexpr const char* ENABLED_INSTANCE_EXTENSIONS[] = {
     "VK_KHR_surface",
@@ -58,9 +60,87 @@ public:
             std::cout << "Device destroyed" << std::endl;
         }
     }
+    
+    VkDevice handle()
+    {
+        return m_device;
+    } 
 
 private:
     VkDevice m_device = VK_NULL_HANDLE;
+};
+
+class ShaderModule {
+public:
+    explicit ShaderModule(const std::string& filepath) {
+        std::fstream file(filepath, std::ios::binary | std::ios::ate);
+        size_t filesize = file.tellg();
+        file.seekg(0);
+
+        std::string code(filesize, '\0');
+        file.read(code.data(), filesize);
+        
+        VkShaderModuleCreateInfo module_ci = {};
+        module_ci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        module_ci.codeSize = filesize;
+        module_ci.pCode = reinterpret_cast<const uint32_t*>(code.data());
+
+        VkResult result = vkCreateShaderModule(mDevice->handle(), &module_ci, nullptr, &mModule);
+        if(result != VK_SUCCESS) {
+            throw std::runtime_error("failed to create shader module");
+        }
+    }
+
+    ~ShaderModule() {
+        if(mModule != VK_NULL_HANDLE) {
+            vkDestroyShaderModule(mDevice->handle(), mModule, nullptr);
+            std::cout << "Destroyed shader module" << std::endl;
+        }
+    }
+
+    VkShaderModule handle() {
+        return mModule;
+    }
+
+private:
+    std::shared_ptr<Device> mDevice;
+    VkShaderModule mModule = VK_NULL_HANDLE;
+};
+
+class ComputePipeline {
+public:
+    explicit ComputePipeline(std::shared_ptr<Device> device) {
+        ShaderModule computeModule(COMPUTE_SPV_PATH);
+
+        // TODO
+        throw std::runtime_error("todo");
+    }
+
+    ~ComputePipeline() {
+        if (m_pipeline != VK_NULL_HANDLE) {
+            vkDestroyPipeline(mDevice->handle(), m_pipeline, nullptr);
+            m_pipeline = VK_NULL_HANDLE;
+
+            std::cout << "Destroyed compute pipeline" << std::endl;
+        }
+
+        destroyPipeline();
+    }
+
+    void destroyPipeline() {
+        if (m_pipeline_layout != VK_NULL_HANDLE) {
+            vkDestroyPipelineLayout(mDevice->handle(), m_pipeline_layout, nullptr);
+            m_pipeline_layout = VK_NULL_HANDLE;
+
+            std::cout << "Destroyed pipeline layout" << std::endl;
+        }
+    }
+
+private:
+    std::shared_ptr<Device> mDevice;
+
+    VkPipelineLayout m_pipeline_layout = VK_NULL_HANDLE;
+    VkPipeline m_pipeline = VK_NULL_HANDLE;
 };
 
 class Instance {
