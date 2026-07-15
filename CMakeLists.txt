@@ -6,12 +6,15 @@ set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_WIN32_KHR)
 
 set(SOURCES
     src/main.cpp
+    src/instance.cpp
+    src/device.cpp
+    src/pipeline.cpp
 )
 
-
+add_subdirectory(vendor/spdlog)
 add_subdirectory(vendor/glfw)
 add_subdirectory(vendor/volk)
 
 add_executable(rt ${SOURCES})
 target_include_directories(rt PRIVATE include)
-target_link_libraries(rt PRIVATE volk glfw)
+target_link_libraries(rt PRIVATE volk glfw spdlog)
