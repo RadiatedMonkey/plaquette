@@ -14,6 +14,7 @@ namespace Compute {
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         appInfo.pApplicationName = "Compute";
         appInfo.applicationVersion = 1;
+        appInfo.apiVersion = VK_API_VERSION_1_4;
 
         VkInstanceCreateInfo instanceCi = {};
         instanceCi.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;

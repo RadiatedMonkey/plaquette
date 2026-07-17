@@ -46,13 +46,51 @@ namespace Compute {
     Pipeline::Pipeline(std::shared_ptr<Device> device) : mDevice(device) {
         ShaderModule computeModule(std::move(device), COMPUTE_SPV_PATH);
 
+        VkDescriptorSetLayoutBinding firstBinding = {};
+        firstBinding.binding = 0;
+        firstBinding.descriptorCount = 1;
+        firstBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        firstBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+        VkDescriptorSetLayoutBinding secondBinding = {};
+        secondBinding.binding = 1;
+        secondBinding.descriptorCount = 1;
+        secondBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        secondBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+        VkDescriptorSetLayoutBinding resultBinding = {};
+        resultBinding.binding = 2;
+        resultBinding.descriptorCount = 1;
+        resultBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        resultBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+        VkDescriptorSetLayoutBinding bindings[] = {
+            firstBinding, secondBinding, resultBinding
+        };
+
+        VkDescriptorSetLayoutCreateInfo setCi = {};
+        setCi.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        setCi.bindingCount = 3;
+        setCi.pBindings = bindings;
+
+        VkResult result = vkCreateDescriptorSetLayout(mDevice->handle(), &setCi, nullptr, &mSetLayout);
+        if (result != VK_SUCCESS) {
+            spdlog::error("Failed to create descriptor set layout: {}", static_cast<uint32_t>(result));
+            throw std::runtime_error("Failed to create descriptor set layout");
+        }
+
+        spdlog::debug("Created descriptor set layout");
+
         VkPipelineLayoutCreateInfo layoutCi = {};
         layoutCi.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         layoutCi.pushConstantRangeCount = 0;
-        layoutCi.setLayoutCount = 0;
+        layoutCi.setLayoutCount = 1;
+        layoutCi.pSetLayouts = &mSetLayout;
 
-        VkResult result = vkCreatePipelineLayout(mDevice->handle(), &layoutCi, nullptr, &mLayout);
+        result = vkCreatePipelineLayout(mDevice->handle(), &layoutCi, nullptr, &mLayout);
         if(result != VK_SUCCESS) {
+            destroySetLayout();
+
             spdlog::error("Failed to create compute pipeline layout: {}", static_cast<uint32_t>(result));
             throw std::runtime_error("Failed to create compute pipeline layout");
         }
@@ -71,6 +109,7 @@ namespace Compute {
         result = vkCreateComputePipelines(mDevice->handle(), VK_NULL_HANDLE, 1, &pipelineCi, nullptr, &mPipeline);
         if (result != VK_SUCCESS) {
             destroyPipelineLayout();
+            destroySetLayout();
 
             spdlog::error("Failed to create compute pipeline: {}", static_cast<uint32_t>(result));
             throw std::runtime_error("Failed to create compute pipeline");
@@ -86,6 +125,7 @@ namespace Compute {
         }
 
         destroyPipelineLayout();
+        destroySetLayout();
     }
 
     void Pipeline::destroyPipelineLayout() {
@@ -94,6 +134,15 @@ namespace Compute {
             mLayout = VK_NULL_HANDLE;
 
             spdlog::debug("Destroyed pipeline layout");
+        }
+    }
+
+    void Pipeline::destroySetLayout() {
+        if (mSetLayout != VK_NULL_HANDLE) {
+            vkDestroyDescriptorSetLayout(mDevice->handle(), mSetLayout, nullptr);
+            mSetLayout = VK_NULL_HANDLE;
+
+            spdlog::debug("Destroyed descriptor set layout");
         }
     }
 }
