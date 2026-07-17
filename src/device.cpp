@@ -15,20 +15,20 @@ namespace Compute {
         uint32_t count = 0;
         VkResult result = vkEnumeratePhysicalDevices(mInstance->handle(), &count, nullptr);
         if (result != VK_SUCCESS) {
-            spdlog::error("failed to enumerate physical devices: {}", static_cast<uint32_t>(result));
-            throw std::runtime_error("failed to enumerate physical devices");
+            spdlog::error("Failed to enumerate physical devices: {}", static_cast<uint32_t>(result));
+            throw std::runtime_error("Failed to enumerate physical devices");
         }
 
         if (count == 0) {
-            spdlog::error("found zero physical devices");
-            throw std::runtime_error("no adapters found");
+            spdlog::error("Found zero physical devices");
+            throw std::runtime_error("No adapters found");
         }
 
         std::vector<VkPhysicalDevice> rawAdapters(count);
         result = vkEnumeratePhysicalDevices(mInstance->handle(), &count, rawAdapters.data());
         if (result != VK_SUCCESS) {
-            spdlog::error("failed to enumerate physical devices: {}", static_cast<uint32_t>(result));
-            throw std::runtime_error("failed to enumerate physical devices");
+            spdlog::error("Failed to enumerate physical devices: {}", static_cast<uint32_t>(result));
+            throw std::runtime_error("Failed to enumerate physical devices");
         }
 
         VkPhysicalDevice chosenAdapter = rawAdapters[0];
@@ -62,8 +62,8 @@ namespace Compute {
         }
 
         if (chosenQueue == UINT32_MAX) {
-            spdlog::error("could not find queue with compute and transfer capabilities");
-            throw std::runtime_error("could not find suitable compute queue");
+            spdlog::error("Could not find queue with compute and transfer capabilities");
+            throw std::runtime_error("Could not find suitable compute queue");
         }
 
         float queuePriority = 1.0f;
@@ -84,11 +84,11 @@ namespace Compute {
 
         result = vkCreateDevice(chosenAdapter, &deviceCi, nullptr, &mDevice);
         if (result != VK_SUCCESS) {
-            spdlog::error("failed to create logical device: {}", static_cast<uint32_t>(result));
-            throw std::runtime_error("failed to create logical device");
+            spdlog::error("Failed to create logical device: {}", static_cast<uint32_t>(result));
+            throw std::runtime_error("Failed to create logical device");
         }
 
-        spdlog::debug("logical device created");
+        spdlog::debug("Created logical device");
     }
 
     Device::~Device() {
@@ -96,7 +96,7 @@ namespace Compute {
             vkDestroyDevice(mDevice, nullptr);
             mDevice = VK_NULL_HANDLE;
 
-            spdlog::debug("logical device destroyed");
+            spdlog::debug("Destroyed logical device");
         }
     }
 }   

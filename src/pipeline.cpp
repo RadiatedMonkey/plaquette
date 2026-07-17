@@ -7,20 +7,20 @@
 #include <fstream>
 
 namespace Compute {
-    ShaderModule::ShaderModule(const std::string& filepath) {
-        spdlog::debug("opening shader module {}", filepath);
+    ShaderModule::ShaderModule(std::shared_ptr<Device> device, const std::string& filepath) : mDevice(std::move(device)) {
+        spdlog::debug("Opening shader module {}", filepath);
 
-        std::fstream file(filepath, file.binary | file.ate);
+        std::ifstream file(filepath, std::ios::binary | std::ios::ate);
         if (!file.is_open()) {
-            spdlog::error("failed to open shader module `{}`", filepath);
-            throw std::runtime_error("failed to open shader file");
+            spdlog::error("Failed to open shader module file `{}`", filepath);
+            throw std::runtime_error("Failed to open shader file");
         }
 
         size_t filesize = file.tellg();
         file.seekg(0);
 
-        std::string code(filesize, '\0');
-        file.read(code.data(), filesize);
+        std::vector<uint32_t> code(filesize / sizeof(uint32_t));
+        file.read(reinterpret_cast<char*>(code.data()), filesize);
         
         VkShaderModuleCreateInfo moduleCi = {};
         moduleCi.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -29,22 +29,22 @@ namespace Compute {
 
         VkResult result = vkCreateShaderModule(mDevice->handle(), &moduleCi, nullptr, &mModule);
         if(result != VK_SUCCESS) {
-            spdlog::error("failed to create shader module: {}", static_cast<uint32_t>(result));
-            throw std::runtime_error("failed to create shader module");
+            spdlog::error("Failed to create shader module: {}", static_cast<uint32_t>(result));
+            throw std::runtime_error("Failed to create shader module");
         }
 
-        spdlog::debug("shader module created");
+        spdlog::debug("Created shader module");
     }
 
     ShaderModule::~ShaderModule() {
         if(mModule != VK_NULL_HANDLE) {
             vkDestroyShaderModule(mDevice->handle(), mModule, nullptr);
-            spdlog::debug("destroyed shader module");
+            spdlog::debug("Destroyed shader module");
         }
     }
 
-    Pipeline::Pipeline(std::shared_ptr<Device> device) : mDevice(std::move(device)) {
-        ShaderModule computeModule(COMPUTE_SPV_PATH);
+    Pipeline::Pipeline(std::shared_ptr<Device> device) : mDevice(device) {
+        ShaderModule computeModule(std::move(device), COMPUTE_SPV_PATH);
 
         VkPipelineLayoutCreateInfo layoutCi = {};
         layoutCi.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -53,8 +53,8 @@ namespace Compute {
 
         VkResult result = vkCreatePipelineLayout(mDevice->handle(), &layoutCi, nullptr, &mLayout);
         if(result != VK_SUCCESS) {
-            spdlog::error("failed to create compute pipeline layout: {}", static_cast<uint32_t>(result));
-            throw std::runtime_error("failed to create compute pipeline layout");
+            spdlog::error("Failed to create compute pipeline layout: {}", static_cast<uint32_t>(result));
+            throw std::runtime_error("Failed to create compute pipeline layout");
         }
 
         VkPipelineShaderStageCreateInfo stageCi = {};
@@ -72,8 +72,8 @@ namespace Compute {
         if (result != VK_SUCCESS) {
             destroyPipelineLayout();
 
-            spdlog::error("failed to create compute pipeline: {}", static_cast<uint32_t>(result));
-            throw std::runtime_error("failed to create compute pipeline");
+            spdlog::error("Failed to create compute pipeline: {}", static_cast<uint32_t>(result));
+            throw std::runtime_error("Failed to create compute pipeline");
         }
     }
 
@@ -82,7 +82,7 @@ namespace Compute {
             vkDestroyPipeline(mDevice->handle(), mPipeline, nullptr);
             mPipeline = VK_NULL_HANDLE;
 
-            spdlog::debug("destroyed pipeline");
+            spdlog::debug("Destroyed pipeline");
         }
 
         destroyPipelineLayout();
@@ -93,7 +93,7 @@ namespace Compute {
             vkDestroyPipelineLayout(mDevice->handle(), mLayout, nullptr);
             mLayout = VK_NULL_HANDLE;
 
-            spdlog::debug("destroyed pipeline layout");
+            spdlog::debug("Destroyed pipeline layout");
         }
     }
 }

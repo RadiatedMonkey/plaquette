@@ -26,13 +26,13 @@ namespace Compute {
 
         result = vkCreateInstance(&instanceCi, nullptr, &mInstance);
         if (result != VK_SUCCESS) {
-            spdlog::error("failed to create instance: {}", static_cast<uint32_t>(result));
-            throw std::runtime_error("failed to create instance");
+            spdlog::error("Failed to create instance: {}", static_cast<uint32_t>(result));
+            throw std::runtime_error("Failed to create instance");
         }
 
         volkLoadInstance(mInstance);
 
-        spdlog::debug("instance created");
+        spdlog::debug("Created instance");
     }
 
     Instance::~Instance() {
@@ -42,7 +42,7 @@ namespace Compute {
 
             volkFinalize();
 
-            spdlog::debug("instance destroyed");
+            spdlog::debug("Destroyed instance");
         }
     }
 }

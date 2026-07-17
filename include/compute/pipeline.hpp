@@ -7,13 +7,13 @@
 #include <vulkan/vulkan.h>
 
 namespace Compute {
-    static constexpr const char* COMPUTE_SPV_PATH = "compute.spv";
+    static constexpr const char* COMPUTE_SPV_PATH = BUILD_DIR "/shaders/compute.spv";
 
     class Device;
 
     class ShaderModule {
     public:
-        explicit ShaderModule(const std::string& filepath);
+        explicit ShaderModule(std::shared_ptr<Device> device, const std::string& filepath);
         ~ShaderModule();
 
         VkShaderModule handle() {
