@@ -17,9 +17,24 @@ namespace Compute {
             return mDevice;
         }
 
+        VkPhysicalDeviceProperties properties() {
+            return mProperties;
+        }
+
+        VkPhysicalDeviceFeatures features() {
+            return mFeatures;
+        }
+
+        VkPhysicalDeviceMemoryProperties memProperties() {
+            return mMemProperties;
+        }
+
     private:
         std::shared_ptr<Instance> mInstance = nullptr;
 
+        VkPhysicalDeviceMemoryProperties mMemProperties;
+        VkPhysicalDeviceFeatures mFeatures;
+        VkPhysicalDeviceProperties mProperties;
         VkDevice mDevice = VK_NULL_HANDLE;
     };
 }

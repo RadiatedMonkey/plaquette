@@ -38,6 +38,8 @@ namespace Compute {
 
             if (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
                 chosenAdapter = adapter;
+                mProperties = properties;
+
                 break;
             }
         }
@@ -87,6 +89,9 @@ namespace Compute {
             spdlog::error("Failed to create logical device: {}", static_cast<uint32_t>(result));
             throw std::runtime_error("Failed to create logical device");
         }
+
+        vkGetPhysicalDeviceFeatures(chosenAdapter, &mFeatures);
+        vkGetPhysicalDeviceMemoryProperties(chosenAdapter, &mMemProperties);
 
         spdlog::debug("Created logical device");
     }

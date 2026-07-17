@@ -10,6 +10,7 @@ set(SOURCES
     src/instance.cpp
     src/device.cpp
     src/pipeline.cpp
+    src/storage.cpp
 )
 
 add_subdirectory(vendor/spdlog)
