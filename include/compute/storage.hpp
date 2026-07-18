@@ -1,6 +1,7 @@
 #pragma once
 
 #include <compute/pipeline.hpp>
+#include <compute/reflection.hpp>
 
 #include <vector>
 #include <memory>
@@ -9,50 +10,42 @@
 #include <vulkan/vulkan.h>
 
 namespace Compute {
+    template<typename T>
+    concept BasicBufferType = std::is_same_v<T, float> || std::is_same_v<T, double>;
+
     class Device;
-    
-    class StorageBuffer {
+
+    struct BufferReference {
+        VkBuffer buffer = VK_NULL_HANDLE;
+        VkDeviceMemory memory = VK_NULL_HANDLE;
+    };
+
+    class StorageBuffer : public Resource {
     public:
-        /// @brief Allocate an uninitialized storage buffer.
-        /// @param device The device to allocate on.
-        /// @param size The size of the buffer to allocate. This must be greater than 0.
         StorageBuffer(std::shared_ptr<Device> device, VkDeviceSize size);
 
-        /// @brief Allocates a storage buffer and initializes it with the given data.
-        /// @param device The device to allocate on.
-        /// @param data The data to copy to the buffer.
-        StorageBuffer(std::shared_ptr<Device> device, const std::vector<float>& data);
+        template<BasicBufferType T>
+        StorageBuffer(std::shared_ptr<Device> device, std::vector<T> data) 
+            : StorageBuffer(std::move(device), data.size() * sizeof(T))
+        {
+            // Device local buffer has already been created. Create host coherent staging buffer
+            // and copy to device local buffer.
+
+            auto stagingBuffer = createBoundBuffer(mSize, false);
+
+            
+        }
 
         ~StorageBuffer();
-        
-        VkResult write(const std::vector<float>& data);
-
-        VkBuffer handle() {
-            return mBuffer;
-        }
-
-        VkDeviceMemory memory() {
-            return mMemory;
-        }
 
     private:
-        /// @brief Destroys the buffer. This function does not free the associated memory.
+        BufferReference createBoundBuffer(VkDeviceSize size, bool deviceLocal);
         void destroyBuffer();
 
         std::shared_ptr<Device> mDevice = nullptr;
 
         VkDeviceSize mSize = 0;
-
-        VkDeviceMemory mMemory = VK_NULL_HANDLE;
         VkBuffer mBuffer = VK_NULL_HANDLE;
-    };
-
-    class UniformBuffer {
-    public:
-        UniformBuffer(std::shared_ptr<Device> device);
-        ~UniformBuffer();
-
-    private:
-        std::shared_ptr<Device> mDevice = nullptr;
+        VkDeviceMemory mMemory = VK_NULL_HANDLE;
     };
 }

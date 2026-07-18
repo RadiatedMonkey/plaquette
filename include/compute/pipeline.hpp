@@ -7,6 +7,7 @@
 #define VK_NO_PROTOTYPES
 #include <vulkan/vulkan.h>
 
+#include <compute/reflection.hpp>
 #include <compute/spirv_reflect.h>
 
 namespace Compute {
@@ -40,11 +41,21 @@ namespace Compute {
         Pipeline(std::shared_ptr<Device> device);
         ~Pipeline();
 
+        ReflectLayout& resources() {
+            return mReflectLayout;
+        }
+
+        const ReflectLayout& resources() const {
+            return mReflectLayout;
+        }
+
     private:
         void destroyPipelineLayout();
         void destroySetLayout();
 
         std::shared_ptr<Device> mDevice = nullptr;
+
+        ReflectLayout mReflectLayout;
 
         std::vector<VkDescriptorSetLayout> mSetLayouts;
         VkPipelineLayout mLayout = VK_NULL_HANDLE;

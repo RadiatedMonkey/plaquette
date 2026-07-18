@@ -33,10 +33,10 @@ namespace Compute {
 
         VkPhysicalDevice chosenAdapter = rawAdapters[0];
         for (VkPhysicalDevice adapter : rawAdapters) {
-            VkPhysicalDeviceProperties properties = {};
-            vkGetPhysicalDeviceProperties(adapter, &properties);
+            VkPhysicalDeviceProperties2 properties = {};
+            vkGetPhysicalDeviceProperties2(adapter, &properties);
 
-            if (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
+            if (properties.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
                 chosenAdapter = adapter;
                 mProperties = properties;
 
@@ -90,8 +90,18 @@ namespace Compute {
             throw std::runtime_error("Failed to create logical device");
         }
 
-        vkGetPhysicalDeviceFeatures(chosenAdapter, &mFeatures);
-        vkGetPhysicalDeviceMemoryProperties(chosenAdapter, &mMemProperties);
+        vkGetPhysicalDeviceFeatures2(chosenAdapter, &mFeatures);
+        vkGetPhysicalDeviceMemoryProperties2(chosenAdapter, &mMemProperties);
+
+        VkDeviceQueueInfo2 queueInfo = {};
+        queueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2;
+        queueInfo.queueFamilyIndex = chosenQueue;
+        queueInfo.queueIndex = 0;
+
+        VkQueue rawQueue = VK_NULL_HANDLE;
+        vkGetDeviceQueue2(mDevice, &queueInfo, &rawQueue);
+
+        mQueue = Queue(shared_from_this(), rawQueue, chosenQueue);
 
         spdlog::debug("Created logical device");
     }
@@ -103,5 +113,29 @@ namespace Compute {
 
             spdlog::debug("Destroyed logical device");
         }
+    }
+
+    VkDevice Device::handle() {
+        return mDevice;
+    }
+
+    Queue& Device::queue() {
+        return mQueue;
+    }
+
+    const Queue& Device::queue() const {
+        return mQueue;
+    }
+
+    VkPhysicalDeviceProperties2 Device::properties() {
+        return mProperties;
+    }
+
+    VkPhysicalDeviceFeatures2 Device::features() {
+        return mFeatures;
+    }
+
+    VkPhysicalDeviceMemoryProperties2 Device::memProperties() {
+        return mMemProperties;
     }
 }   

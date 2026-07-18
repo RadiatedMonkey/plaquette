@@ -11,6 +11,8 @@ set(SOURCES
     src/device.cpp
     src/pipeline.cpp
     src/storage.cpp
+    src/reflection.cpp
+    src/command.cpp
     
     src/spirv_reflect.c
 )

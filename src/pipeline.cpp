@@ -63,6 +63,7 @@ namespace Compute {
         ReflectableShader shader(mDevice, COMPUTE_SPV_PATH);
 
         SpvReflectShaderModule module = shader.reflectHandle();
+        mReflectLayout = ReflectLayout(module);
 
         std::vector<VkPushConstantRange> pushConstants(module.push_constant_block_count);
         for (uint32_t i = 0; i < module.push_constant_block_count; i++) {
@@ -112,7 +113,7 @@ namespace Compute {
 
             spdlog::debug("Created descriptor set layout {} with {} bindings", i, bindings.size());
         }
-
+        
         spdlog::debug("Created {} descriptor set layouts", module.descriptor_set_count);
 
         VkPipelineLayoutCreateInfo layoutCi = {};
