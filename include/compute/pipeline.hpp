@@ -46,7 +46,7 @@ namespace Compute {
 
         std::shared_ptr<Device> mDevice = nullptr;
 
-        VkDescriptorSetLayout mSetLayout = VK_NULL_HANDLE;
+        std::vector<VkDescriptorSetLayout> mSetLayouts;
         VkPipelineLayout mLayout = VK_NULL_HANDLE;
         VkPipeline mPipeline = VK_NULL_HANDLE;
     };
