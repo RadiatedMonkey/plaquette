@@ -6,10 +6,11 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
+#include <vector>
 #include <memory>
 
-float firstData[] = {1, 2, 3};
-float secondData[] = {3, 2, 1};
+static const std::vector<float> firstData = {1, 2, 3};
+static const std::vector<float> secondData = {3, 2, 1};
 
 int main() {
     auto logger = spdlog::stdout_color_mt("logger");
@@ -20,11 +21,12 @@ int main() {
     try {
         auto instance = std::make_shared<Compute::Instance>();
         auto device = std::make_shared<Compute::Device>(instance);
-        auto pipeline = std::make_shared<Compute::Pipeline>(device);
-        
-        auto firstBuffer = std::make_shared<Compute::StorageBuffer>(device, std::size(firstData) * sizeof(float));
-        auto secondBuffer = std::make_shared<Compute::StorageBuffer>(device, std::size(secondData) * sizeof(float));
+
+        auto firstBuffer = std::make_shared<Compute::StorageBuffer>(device, firstData);
+        auto secondBuffer = std::make_shared<Compute::StorageBuffer>(device, secondData);
         auto resultBuffer = std::make_shared<Compute::StorageBuffer>(device, std::size(secondData) * sizeof(float));
+
+        auto pipeline = std::make_shared<Compute::Pipeline>(device);
     } catch(const std::exception& e) {
         spdlog::error("exception: {}", e.what());
         return 1;

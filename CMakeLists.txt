@@ -11,6 +11,8 @@ set(SOURCES
     src/device.cpp
     src/pipeline.cpp
     src/storage.cpp
+    
+    src/spirv_reflect.c
 )
 
 add_subdirectory(vendor/spdlog)

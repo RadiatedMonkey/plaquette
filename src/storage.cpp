@@ -55,7 +55,7 @@ namespace Compute {
         spdlog::debug("Allocated {} bytes of storage buffer memory", mSize);
     }
 
-    StorageBuffer::StorageBuffer(std::shared_ptr<Device> device, const std::vector<float>& data) : StorageBuffer(mDevice, data.size() * sizeof(float))
+    StorageBuffer::StorageBuffer(std::shared_ptr<Device> device, const std::vector<float>& data) : StorageBuffer(device, data.size() * sizeof(float))
     {
         // Buffer already created, just need to copy over the data.
 

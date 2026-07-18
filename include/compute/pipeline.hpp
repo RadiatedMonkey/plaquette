@@ -2,26 +2,36 @@
 
 #include <string>
 #include <memory>
+#include <type_traits>
 
 #define VK_NO_PROTOTYPES
 #include <vulkan/vulkan.h>
+
+#include <compute/spirv_reflect.h>
 
 namespace Compute {
     static constexpr const char* COMPUTE_SPV_PATH = BUILD_DIR "/shaders/compute.spv";
 
     class Device;
 
-    class ShaderModule {
+    class ReflectableShader {
     public:
-        explicit ShaderModule(std::shared_ptr<Device> device, const std::string& filepath);
-        ~ShaderModule();
+        ReflectableShader(std::shared_ptr<Device> device, const std::string& filepath);
+        ~ReflectableShader();
 
         VkShaderModule handle() {
             return mModule;
         }
 
+        SpvReflectShaderModule reflectHandle() {
+            return mReflectModule;
+        }
+
     private:
+        void destroyReflectModule();
+
         std::shared_ptr<Device> mDevice = nullptr;
+        SpvReflectShaderModule mReflectModule;
         VkShaderModule mModule = VK_NULL_HANDLE;
     };
 
