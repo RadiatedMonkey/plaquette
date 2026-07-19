@@ -10,40 +10,19 @@ namespace Compute {
 
     class Commands {
     public:
+        Commands(Commands&& rhs) noexcept;
+        Commands(const Commands&) = delete;
         ~Commands();
-        
-        void finish();
-        void submit();
+
+        VkCommandBuffer handle();
 
     private:
-        friend class Queue;
+        friend Device;
 
         Commands(std::shared_ptr<Device> device, VkCommandBuffer buffer);
 
         std::shared_ptr<Device> mDevice = nullptr;
 
         VkCommandBuffer mBuffer = VK_NULL_HANDLE;
-    };
-
-    class Queue {
-    public:
-        ~Queue();
-
-        VkCommandPool pool();
-        Commands record();
-
-    private:
-        friend Device;
-
-        Queue() = default;
-        Queue(std::shared_ptr<Device> device, VkQueue queue, uint32_t queueFamilyIndex);    
-
-        void destroyCommandPool();
-
-        VkCommandPool mPool = VK_NULL_HANDLE;
-        std::shared_ptr<Device> mDevice = nullptr;
-        VkQueue mQueue = VK_NULL_HANDLE;
-
-        uint32_t mQueueFamilyIndex = UINT32_MAX;
     };
 }

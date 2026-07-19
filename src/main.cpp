@@ -19,8 +19,8 @@ int main() {
     spdlog::trace("logger initialized");
 
     try {
-        auto instance = std::make_shared<Compute::Instance>();
-        auto device = std::make_shared<Compute::Device>(instance);
+        auto instance = Compute::Instance::create();
+        auto device = instance->createDevice();
 
         auto firstBuffer = std::make_shared<Compute::StorageBuffer>(device, firstData);
         auto secondBuffer = std::make_shared<Compute::StorageBuffer>(device, secondData);

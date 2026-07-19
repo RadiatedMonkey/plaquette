@@ -2,12 +2,14 @@
 
 #include <compute/pipeline.hpp>
 #include <compute/reflection.hpp>
+#include <compute/command.hpp>
+#include <compute/device.hpp>
 
 #include <vector>
 #include <memory>
 
-#define VK_NO_PROTOTYPES
-#include <vulkan/vulkan.h>
+#include <spdlog/spdlog.h>
+#include <volk.h>
 
 namespace Compute {
     template<typename T>
@@ -31,15 +33,37 @@ namespace Compute {
             // Device local buffer has already been created. Create host coherent staging buffer
             // and copy to device local buffer.
 
-            auto stagingBuffer = createBoundBuffer(mSize, false);
+            auto stagingBuffer = createBoundBuffer(mSize, true);
+            Commands cmds = mDevice->record();
 
-            
+            VkCommandBuffer cmdBuffer = cmds.handle();
+
+            VkBufferCopy2 region = {};
+            region.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
+            region.srcOffset = 0;
+            region.dstOffset = 0;
+            region.size = mSize;
+
+            VkCopyBufferInfo2 copyInfo = {};
+            copyInfo.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
+            copyInfo.srcBuffer = stagingBuffer.buffer;
+            copyInfo.dstBuffer = mBuffer;
+            copyInfo.regionCount = 1;
+            copyInfo.pRegions = &region;
+
+            vkCmdCopyBuffer2(cmdBuffer, &copyInfo);
+
+            mDevice->submit(std::move(cmds));
+
+            spdlog::debug("Submitted transfer command for staging buffer");
         }
 
         ~StorageBuffer();
 
     private:
-        BufferReference createBoundBuffer(VkDeviceSize size, bool deviceLocal);
+        BufferReference createBoundBuffer(VkDeviceSize size, bool isTransferSrc);
+
+        void freeMemory();
         void destroyBuffer();
 
         std::shared_ptr<Device> mDevice = nullptr;

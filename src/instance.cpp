@@ -1,9 +1,15 @@
 #include <compute/instance.hpp>
+#include <compute/device.hpp>
 
 #include <volk.h>
 #include <spdlog/spdlog.h>
 
 namespace Compute {
+    std::shared_ptr<Instance> Instance::create() {
+        // Due to private constructor, make_shared does not work.
+        return std::shared_ptr<Instance>(new Instance());
+    }
+
     Instance::Instance() {
         VkResult result = volkInitialize();
         if (result != VK_SUCCESS) {
@@ -45,5 +51,10 @@ namespace Compute {
 
             spdlog::debug("Destroyed instance");
         }
+    }
+
+    std::shared_ptr<Device> Instance::createDevice() {
+        // make_shared cannot access private Device constructor.
+        return std::shared_ptr<Device>(new Device(shared_from_this()));
     }
 }
