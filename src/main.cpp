@@ -2,6 +2,7 @@
 #include <compute/device.hpp>
 #include <compute/pipeline.hpp>
 #include <compute/storage.hpp>
+#include <compute/log.hpp>
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -16,15 +17,24 @@ int main() {
     auto logger = spdlog::stdout_color_mt("logger");
 
     spdlog::set_level(spdlog::level::trace);
-    spdlog::trace("logger initialized");
+    spdlog::trace("Logger initialized");
 
     try {
         auto instance = Compute::Instance::create();
         auto device = instance->createDevice();
 
-        auto firstBuffer = std::make_shared<Compute::StorageBuffer>(device, firstData);
-        auto secondBuffer = std::make_shared<Compute::StorageBuffer>(device, secondData);
-        auto resultBuffer = std::make_shared<Compute::StorageBuffer>(device, std::size(secondData) * sizeof(float));
+        auto cmds = device->createCmdBuffer();
+
+        VkCommandBufferBeginInfo beginInfo = {};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+        LOG_VKRESULT(
+            vkBeginCommandBuffer(cmds.handle(), &beginInfo),
+            "Failed to start command buffer"
+        );
+
+        Compute::HostBuffer<float> stagingBuffer(device, firstData.size() * sizeof(float));
+
 
         auto pipeline = std::make_shared<Compute::Pipeline>(device);
     } catch(const std::exception& e) {

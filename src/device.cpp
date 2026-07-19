@@ -157,7 +157,7 @@ namespace Compute {
         return mDevice;
     }
 
-    Commands Device::record() {
+    Commands Device::createCmdBuffer() {
         VkCommandBufferAllocateInfo bufferCi = {};
         bufferCi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         bufferCi.commandPool = mPool;
@@ -173,57 +173,10 @@ namespace Compute {
             throw std::runtime_error("Failed to allocate command buffers");
         }
 
-        VkCommandBufferBeginInfo beginInfo = {};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-
-        result = vkBeginCommandBuffer(buffer, &beginInfo);
-        if (result != VK_SUCCESS) {
-            vkFreeCommandBuffers(mDevice, mPool, 1, &buffer);
-            spdlog::debug("Freed command buffer");
-
-            spdlog::error("Failed to begin command buffer: {}", static_cast<uint32_t>(result));
-            throw std::runtime_error("Failed to begin command buffer");
-        }
-
-        return Commands(std::move(device), buffer);
+        return { std::move(device), buffer };
     }
 
-    VkFence Device::submit(Commands commands) {
-        VkResult result = vkEndCommandBuffer(commands.handle());
-        if (result != VK_SUCCESS) {
-            spdlog::error("Failed to end command buffer: {}", static_cast<uint32_t>(result));
-            throw std::runtime_error("Failed to end command buffer");
-        }
-
-        VkFenceCreateInfo fenceCi = {};
-        fenceCi.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-
-        VkFence fence = VK_NULL_HANDLE;
-        result = vkCreateFence(mDevice, &fenceCi, nullptr, &fence);
-        if (result != VK_SUCCESS) {
-            spdlog::error("Failed to create fence: {}", static_cast<uint32_t>(result));
-            throw std::runtime_error("Failed to create fence");
-        }
-
-        VkCommandBufferSubmitInfo cmdBufferInfo = {};
-        cmdBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
-        cmdBufferInfo.commandBuffer = commands.handle();
-
-        VkSubmitInfo2 submitInfo = {};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
-        submitInfo.commandBufferInfoCount = 1;
-        submitInfo.pCommandBufferInfos = &cmdBufferInfo;
-
-        result = vkQueueSubmit2(mQueue, 1, &submitInfo, fence);
-        if (result != VK_SUCCESS) {
-            spdlog::error("Failed to submit command buffer: {}", static_cast<uint32_t>(result));
-            throw std::runtime_error("Failed to submit command buffer");
-        }
-
-        return fence;
-    }
-
-    VkCommandPool Device::pool() {
+    VkCommandPool Device::cmdPool() {
         return mPool;
     }
 

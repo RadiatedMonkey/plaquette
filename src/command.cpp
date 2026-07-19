@@ -19,10 +19,18 @@ namespace Compute {
 
     Commands::~Commands() {
         if (mBuffer != VK_NULL_HANDLE) {
-            vkFreeCommandBuffers(mDevice->handle(), mDevice->pool(), 1, &mBuffer);
+            vkFreeCommandBuffers(mDevice->handle(), mDevice->cmdPool(), 1, &mBuffer);
             mBuffer = VK_NULL_HANDLE;
 
             spdlog::debug("Freed command buffer");
+        }
+    }
+
+    void Commands::reset() {
+        VkResult result = vkResetCommandBuffer(mBuffer, 0);
+        if (result != VK_SUCCESS) {
+            spdlog::error("Failed to reset command buffer: {}", static_cast<uint32_t>(result));
+            throw std::runtime_error("Failed to reset command buffer");
         }
     }
 }

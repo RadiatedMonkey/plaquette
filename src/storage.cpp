@@ -5,19 +5,6 @@
 #include <volk.h>
 
 namespace Compute {
-    StorageBuffer::StorageBuffer(std::shared_ptr<Device> device, VkDeviceSize size) 
-        : mDevice(std::move(device)), mSize(size) 
-    {
-        auto deviceBuffer = createBoundBuffer(size, false);
-        mBuffer = deviceBuffer.buffer;
-        mMemory = deviceBuffer.memory;
-    }
-    
-    StorageBuffer::~StorageBuffer() {
-        freeMemory();
-        destroyBuffer();
-    }
-
     uint32_t findMemoryType(uint32_t typeBits, VkPhysicalDeviceMemoryProperties memProperties, VkMemoryPropertyFlags propertyFlags) {
         for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
             bool hardwareSupported = typeBits & (1 << i);
@@ -31,81 +18,67 @@ namespace Compute {
         return UINT32_MAX;
     }
 
-    BufferReference StorageBuffer::createBoundBuffer(VkDeviceSize size, bool isTransferSrc) {
-        BufferReference bufferRef = {};
-
+    StorageBuffer::StorageBuffer(std::shared_ptr<Device> device, VkDeviceSize size) 
+        : mDevice(std::move(device)), mSize(size) 
+    {
         VkBufferCreateInfo bufferCi = {};
         bufferCi.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        bufferCi.size = mSize;
         bufferCi.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        bufferCi.size = size;
+        bufferCi.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 
-        if (isTransferSrc) {
-            bufferCi.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-        } else {
-            bufferCi.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-        }
+        LOG_VKRESULT(
+            vkCreateBuffer(mDevice->handle(), &bufferCi, nullptr, &mBuffer),
+            "Failed to create storage buffer"
+        );
 
-        VkResult result = vkCreateBuffer(mDevice->handle(), &bufferCi, nullptr, &bufferRef.buffer);
-        if (result != VK_SUCCESS) {
-            spdlog::error("Failed to create storage buffer of size {}: {}", size, static_cast<uint32_t>(size));
-            throw std::runtime_error("Failed to create storage buffer");
-        }
+        VkBufferMemoryRequirementsInfo2 memReqInfo = {};
+        memReqInfo.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2;
+        memReqInfo.buffer = mBuffer;
 
-        VkPhysicalDeviceMemoryProperties memProperties = mDevice->memProperties().memoryProperties;
+        VkMemoryRequirements2 memReqs = {};
+        vkGetBufferMemoryRequirements2(mDevice->handle(), &memReqInfo, &memReqs);
 
-        VkBufferMemoryRequirementsInfo2 memRequirementsInfo = {};
-        memRequirementsInfo.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2;
-        memRequirementsInfo.buffer = bufferRef.buffer;
-
-        VkMemoryRequirements2 memRequirements = {};
-        memRequirements.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
-
-        vkGetBufferMemoryRequirements2(mDevice->handle(), &memRequirementsInfo, &memRequirements);
-
-        VkMemoryPropertyFlags memFlags;
-        if (!isTransferSrc) {
-            memFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-        } else {
-            memFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-        }
-
-        uint32_t memTypeIndex = findMemoryType(memRequirements.memoryRequirements.memoryTypeBits, memProperties, memFlags);
-        if (memTypeIndex == UINT32_MAX) { // Not found
-            destroyBuffer();
-
-            spdlog::error("Failed to find suitable memory type for buffer");
-            throw std::runtime_error("Failed to find suitable memory type for buffer");
-        }
+        uint32_t memoryTypeIndex = findMemoryType(
+            memReqs.memoryRequirements.memoryTypeBits,
+            mDevice->memProperties().memoryProperties,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+        );
 
         VkMemoryAllocateInfo memoryCi = {};
         memoryCi.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        memoryCi.allocationSize = memRequirements.memoryRequirements.size;
-        memoryCi.memoryTypeIndex = memTypeIndex;
+        memoryCi.memoryTypeIndex = memoryTypeIndex;
+        memoryCi.allocationSize = memReqs.memoryRequirements.size;
 
-        result = vkAllocateMemory(mDevice->handle(), &memoryCi, nullptr, &bufferRef.memory);
-        if (result != VK_SUCCESS) {
-            destroyBuffer();
-
-            spdlog::error("Failed to allocate {} bytes of device local memory: {}", size, static_cast<uint32_t>(result));
-            throw std::runtime_error("Failed to allocate device local memory");
-        }
+        CHECK_VKRESULT(
+            vkAllocateMemory(mDevice->handle(), &memoryCi, nullptr, &mMemory),
+            "Failed to allocate storage buffer memory",
+            destroyBuffer()
+        );
 
         VkBindBufferMemoryInfo bindInfo = {};
         bindInfo.sType = VK_STRUCTURE_TYPE_BIND_BUFFER_MEMORY_INFO;
-        bindInfo.buffer = bufferRef.buffer;
-        bindInfo.memory = bufferRef.memory;
+        bindInfo.buffer = mBuffer;
+        bindInfo.memory = mMemory;
         bindInfo.memoryOffset = 0;
-        
-        result = vkBindBufferMemory2(mDevice->handle(), 1, &bindInfo);
-        if (result != VK_SUCCESS) {
-            destroyBuffer();
-            freeMemory();
 
-            spdlog::error("Failed to bind allocated memory to storage buffer: {}", static_cast<uint32_t>(result));
-            throw std::runtime_error("Failed to bind allocated memory to storage buffer");
-        }
+        CHECK_VKRESULT(
+            vkBindBufferMemory2(mDevice->handle(), 1, &bindInfo),
+            "Failed to bind storage buffer memory to buffer",
+            {
+                freeMemory();
+                destroyBuffer();
+            }
+        );
+    }
+    
+    StorageBuffer::~StorageBuffer() {
+        freeMemory();
+        destroyBuffer();
+    }
 
-        return bufferRef;
+    VkBuffer StorageBuffer::handle() {
+        return mBuffer;
     }
 
     void StorageBuffer::destroyBuffer() {

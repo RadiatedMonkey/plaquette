@@ -14,6 +14,7 @@ namespace Compute {
         Commands(const Commands&) = delete;
         ~Commands();
 
+        void reset();
         VkCommandBuffer handle();
 
     private:

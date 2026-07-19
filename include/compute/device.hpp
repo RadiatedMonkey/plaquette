@@ -5,6 +5,7 @@
 #define VK_NO_PROTOTYPES
 #include <vulkan/vulkan.h>
 
+#include <compute/storage.hpp>
 #include <compute/command.hpp>
 
 namespace Compute {
@@ -14,12 +15,19 @@ namespace Compute {
     public:
         ~Device();
 
+        /// The raw Vulkan handle to this device.
         VkDevice handle();
 
-        VkFence submit(Commands commands);
+        /// Creates a host-visible, host-coherent buffer with associated memory of size `size`.
+        ///
+        /// This can be used as a staging buffer to populate device local buffers.
+        template<typename T>
+        HostBuffer<T> createHostBuffer(VkDeviceSize size) {
+            return HostBuffer<T>(shared_from_this(), size);
+        }
 
-        VkCommandPool pool();
-        Commands record();
+        VkCommandPool cmdPool();
+        Commands createCmdBuffer();
 
         VkPhysicalDeviceProperties2 properties();
         VkPhysicalDeviceFeatures2 features();
