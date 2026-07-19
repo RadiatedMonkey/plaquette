@@ -5,32 +5,51 @@
 #define VK_NO_PROTOTYPES
 #include <vulkan/vulkan.h>
 
-#include <compute/storage.hpp>
 #include <compute/command.hpp>
 
 namespace Compute {
     class Instance;
+    class StorageBuffer;
+    template<typename T> class HostBuffer;
 
     class Device : public std::enable_shared_from_this<Device> {
     public:
+        /// @warning The destructor should only run once all device-created resources have been destroyed.
         ~Device();
 
-        /// The raw Vulkan handle to this device.
+        /// @brief The raw Vulkan handle to this device.
         VkDevice handle();
 
-        /// Creates a host-visible, host-coherent buffer with associated memory of size `size`.
+        /// @brief Creates a host-visible, host-coherent buffer.
+        /// @param size The size in elements of the buffer to create.
         ///
-        /// This can be used as a staging buffer to populate device local buffers.
+        /// @note This can be used as a staging buffer to populate device local buffers.
         template<typename T>
-        HostBuffer<T> createHostBuffer(VkDeviceSize size) {
-            return HostBuffer<T>(shared_from_this(), size);
-        }
+        std::shared_ptr<HostBuffer<T>> createHostBuffer(uint64_t size);
 
+        /// @brief Creates a device-local storage buffer of specified size.
+        /// @param size The amount of elements of type `T` to fit into this buffer.
+        ///
+        /// @note This buffer cannot be mapped to host memory directly and must be populated by
+        /// transferring from a staging buffer.
+        template<typename T>
+        std::shared_ptr<StorageBuffer> createStorageBuffer(uint64_t size);
+
+        /// @brief The raw Vulkan command pool handle.
         VkCommandPool cmdPool();
+
+        /// @brief Creates a command buffer that can be recorded into.
+        ///
+        /// @warning The command buffer must be begun by the caller using `vkBeginCommandBuffer`.
         Commands createCmdBuffer();
 
+        /// @brief The properties of this device.
         VkPhysicalDeviceProperties2 properties();
+
+        /// @brief The features of this device.
         VkPhysicalDeviceFeatures2 features();
+
+        /// @brief The memory properties of this device.
         VkPhysicalDeviceMemoryProperties2 memProperties();
 
     private:

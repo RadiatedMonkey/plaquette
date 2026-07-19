@@ -33,8 +33,46 @@ int main() {
             "Failed to start command buffer"
         );
 
-        Compute::HostBuffer<float> stagingBuffer(device, firstData.size() * sizeof(float));
+        auto staging = device->createHostBuffer<float>(firstData.size());
+        {
+            auto mapped = staging->map();
+            std::memcpy(mapped.get(), firstData.data(), firstData.size() * sizeof(float));
+        }
 
+        auto staging2 = device->createHostBuffer<float>(secondData.size());
+        {
+            auto mapped = staging2->map();
+            std::memcpy(mapped.get(), secondData.data(), secondData.size() * sizeof(float));
+        }
+
+        auto firstBuffer = device->createStorageBuffer<float>(firstData.size());
+        auto secondBuffer = device->createStorageBuffer<float>(secondData.size());
+        auto resultBuffer = device->createStorageBuffer<float>(secondData.size());
+
+        VkBufferCopy2 copyRegion = {};
+        copyRegion.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
+        copyRegion.srcOffset = 0;
+        copyRegion.dstOffset = 0;
+        copyRegion.size = staging->size();
+
+        VkCopyBufferInfo2 copyInfo = {};
+        copyInfo.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
+        copyInfo.srcBuffer = staging->handle();
+        copyInfo.dstBuffer = firstBuffer->handle();
+        copyInfo.regionCount = 1;
+        copyInfo.pRegions = &copyRegion;
+
+        vkCmdCopyBuffer2(cmds.handle(), &copyInfo);
+
+        copyInfo.srcBuffer = staging2->handle();
+        copyInfo.dstBuffer = secondBuffer->handle();
+
+        vkCmdCopyBuffer2(cmds.handle(), &copyInfo);
+
+        LOG_VKRESULT(
+            vkEndCommandBuffer(cmds.handle()),
+            "Failed to end command buffer"
+        );
 
         auto pipeline = std::make_shared<Compute::Pipeline>(device);
     } catch(const std::exception& e) {

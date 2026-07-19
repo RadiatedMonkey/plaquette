@@ -1,12 +1,10 @@
 #pragma once
 
+#include <compute/device.hpp>
 #include <compute/pipeline.hpp>
 #include <compute/reflection.hpp>
-#include <compute/command.hpp>
-#include <compute/device.hpp>
 #include <compute/log.hpp>
 
-#include <vector>
 #include <memory>
 
 #include <spdlog/spdlog.h>
@@ -14,7 +12,6 @@
 
 namespace Compute {
     class Device;
-    class StorageBuffer;
 
     template<typename T>
     class HostBuffer;
@@ -30,22 +27,29 @@ namespace Compute {
     ///
     /// Upon destruction, this pointer automatically unmaps the memory.
     template<typename T>
-    class MappedPtr {
+    class Mapped {
     public:
-        operator T*() {
+        T* get() {
             return mPtr;
         }
 
-        operator const T*() const {
+        const T* get() const {
             return mPtr;
         }
 
-        ~MappedPtr() {
+        ~Mapped() {
             VkMemoryUnmapInfo unmapInfo = {};
             unmapInfo.sType = VK_STRUCTURE_TYPE_MEMORY_UNMAP_INFO;
             unmapInfo.memory = mBuffer->memory();
 
-            LOG_VKRESULT(vkUnmapMemory2(mBuffer->device()->handle(), &unmapInfo), "Failed to unmap buffer memory");
+            VkResult result = vkUnmapMemory2(mBuffer->mDevice->handle(), &unmapInfo);
+            if (result != VK_SUCCESS) {
+                spdlog::error("Failed to unmap memory");
+                // No exception is thrown here since this error is not critical
+                // and throwing an exception in a destructor will likely cause termination.
+            }
+
+            spdlog::debug("Unmapped buffer from host memory");
         }
 
         /// The size of the underlying memory.
@@ -56,7 +60,7 @@ namespace Compute {
     private:
         friend HostBuffer<T>;
 
-        MappedPtr(std::shared_ptr<HostBuffer<T>> buffer) : mBuffer(std::move(buffer)) {
+        Mapped(std::shared_ptr<HostBuffer<T>> buffer) : mBuffer(std::move(buffer)) {
             VkMemoryMapInfo mapInfo = {};
             mapInfo.sType = VK_STRUCTURE_TYPE_MEMORY_MAP_INFO;
             mapInfo.size = mBuffer->size();
@@ -64,15 +68,18 @@ namespace Compute {
             mapInfo.offset = 0;
 
             LOG_VKRESULT(
-                vkMapMemory2(mBuffer->device()->handle(), &mapInfo, &mPtr),
+                vkMapMemory2(mBuffer->mDevice->handle(), &mapInfo, reinterpret_cast<void**>(&mPtr)),
                 "Failed to map memory to host buffer"
             );
+
+            spdlog::debug("Mapped buffer to host memory");
         }
 
         std::shared_ptr<HostBuffer<T>> mBuffer;
         T* mPtr = nullptr;
     };
 
+    /// @brief A host-visible, host-coherent buffer.
     template<typename T>
     class HostBuffer : public std::enable_shared_from_this<HostBuffer<T>> {
     public:
@@ -81,20 +88,11 @@ namespace Compute {
             destroyBuffer();
         }
 
-        MappedPtr<T> map() {
-            VkMemoryMapInfo mapInfo = {};
-            mapInfo.sType = VK_STRUCTURE_TYPE_MEMORY_MAP_INFO;
-            mapInfo.memory = mMemory;
-            mapInfo.offset = 0;
-            mapInfo.size = mSize;
-
-            T* mappedPtr = nullptr;
-            LOG_VKRESULT(
-                vkMapMemory2(mDevice->handle(), &mapInfo, reinterpret_cast<void**>(&mappedPtr)),
-                "Failed to map buffer to host memory"
-            );
-
-            return MappedPtr(mappedPtr, this->shared_from_this());
+        /// @brief Maps the buffer into host address space.
+        ///
+        /// @note The buffer is automatically unmapped once the mapped pointer is dropped.
+        Mapped<T> map() {
+            return Mapped<T>(this->shared_from_this());
         }
 
         VkBuffer handle() {
@@ -111,11 +109,15 @@ namespace Compute {
 
     private:
         friend Device;
+        friend Mapped<T>;
 
-        /// This constructor is private to ensure that a host buffer can only be constructed inside of
+        /// @note This constructor is private to ensure that a host buffer can only be constructed inside of
         /// a shared_ptr. This prevents buffer mapping breaking due to no shared pointers existing.
-        HostBuffer(std::shared_ptr<Device> device, VkDeviceSize size)
-            : mDevice(std::move(device)), mSize(size)
+        ///
+        /// @param device The device to create this buffer on.
+        /// @param size The number of elements of type `T` to fit into this buffer.
+        HostBuffer(std::shared_ptr<Device> device, uint64_t size)
+            : mDevice(std::move(device)), mSize(size * sizeof(T))
         {
             VkBufferCreateInfo bufferCi = {};
             bufferCi.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -125,14 +127,18 @@ namespace Compute {
 
             LOG_VKRESULT(
                 vkCreateBuffer(mDevice->handle(), &bufferCi, nullptr, &mBuffer),
-                "Failed to create staging buffer"
+                "Failed to create host buffer"
             );
+
+            spdlog::debug("Created host buffer");
 
             VkBufferMemoryRequirementsInfo2 memReqInfo = {};
             memReqInfo.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2;
             memReqInfo.buffer = mBuffer;
 
             VkMemoryRequirements2 memReqs = {};
+            memReqs.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
+
             vkGetBufferMemoryRequirements2(mDevice->handle(), &memReqInfo, &memReqs);
 
             uint32_t memoryTypeIndex = findMemoryType(
@@ -148,9 +154,11 @@ namespace Compute {
 
             CHECK_VKRESULT(
                 vkAllocateMemory(mDevice->handle(), &memoryCi, nullptr, &mMemory),
-                "Failed to allocate staging buffer memory",
+                "Failed to allocate host buffer memory",
                 destroyBuffer()
             );
+
+            spdlog::debug("Allocated {} bytes of memory for the host buffer", mSize);
 
             VkBindBufferMemoryInfo bindInfo = {};
             bindInfo.sType = VK_STRUCTURE_TYPE_BIND_BUFFER_MEMORY_INFO;
@@ -166,13 +174,15 @@ namespace Compute {
                     destroyBuffer();
                 }
             );
+
+            spdlog::debug("Bound host buffer and memory");
         }
 
         void destroyBuffer() {
             if (mBuffer != VK_NULL_HANDLE) {
                 vkDestroyBuffer(mDevice->handle(), mBuffer, nullptr);
                 mBuffer = VK_NULL_HANDLE;
-                spdlog::debug("Destroyed staging buffer");
+                spdlog::debug("Destroyed host buffer");
             }
         }
 
@@ -180,7 +190,7 @@ namespace Compute {
             if (mMemory != VK_NULL_HANDLE) {
                 vkFreeMemory(mDevice->handle(), mMemory, nullptr);
                 mMemory = VK_NULL_HANDLE;
-                spdlog::debug("Freed staging buffer memory");
+                spdlog::debug("Freed host buffer memory");
             }
         }
 
@@ -193,12 +203,19 @@ namespace Compute {
 
     class StorageBuffer : public Resource {
     public:
-        StorageBuffer(std::shared_ptr<Device> device, VkDeviceSize size);
         ~StorageBuffer();
 
         VkBuffer handle();
 
     private:
+        friend Device;
+
+        /// @brief Creates a storage buffer.
+        ///
+        /// @param device The device to create the storage buffer on.
+        /// @param size The size in bytes of the buffer to be created.
+        StorageBuffer(std::shared_ptr<Device> device, VkDeviceSize size);
+
         void freeMemory();
         void destroyBuffer();
 
@@ -208,4 +225,16 @@ namespace Compute {
         VkBuffer mBuffer = VK_NULL_HANDLE;
         VkDeviceMemory mMemory = VK_NULL_HANDLE;
     };
+
+    // These are defined here to avoid a circular dependency between storage.hpp and device.hpp.
+
+    template<typename T>
+    std::shared_ptr<HostBuffer<T>> Device::createHostBuffer(uint64_t size) {
+        return std::shared_ptr<HostBuffer<T>>(new HostBuffer<T>(shared_from_this(), size));
+    }
+
+    template<typename T>
+    std::shared_ptr<StorageBuffer> Device::createStorageBuffer(uint64_t size) {
+        return std::shared_ptr<StorageBuffer>(new StorageBuffer(shared_from_this(), size * sizeof(T)));
+    }
 }

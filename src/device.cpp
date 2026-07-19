@@ -77,8 +77,12 @@ namespace Compute {
         queueCi.queueCount = 1;
         queueCi.pQueuePriorities = &queuePriority;
 
+        VkPhysicalDeviceDescriptorIndexingFeatures descriptorFeatures = {};
+        descriptorFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+
         VkPhysicalDeviceSynchronization2Features sync2Features = {};
         sync2Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES;
+        sync2Features.pNext = &descriptorFeatures;
 
         VkPhysicalDeviceFeatures2 enabledFeatures = {};
         enabledFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
@@ -90,7 +94,19 @@ namespace Compute {
             throw std::runtime_error("This device does not support synchronization2");
         }
 
-        sync2Features.synchronization2 = VK_TRUE;
+        spdlog::trace("Adapter supports synchronization2");
+
+        bool indexingSupported =
+            descriptorFeatures.descriptorBindingStorageBufferUpdateAfterBind &&
+            descriptorFeatures.descriptorBindingUniformBufferUpdateAfterBind &&
+            descriptorFeatures.shaderStorageBufferArrayNonUniformIndexing &&
+            descriptorFeatures.shaderUniformBufferArrayNonUniformIndexing;
+
+        if (!indexingSupported) {
+            throw std::runtime_error("This device does not support bindless descriptor sets");
+        }
+
+        spdlog::trace("Adapter supports bindless descriptor sets");
 
         VkDeviceCreateInfo deviceCi = {};
         deviceCi.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

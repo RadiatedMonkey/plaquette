@@ -32,11 +32,15 @@ namespace Compute {
             "Failed to create storage buffer"
         );
 
+        spdlog::debug("Created storage buffer");
+
         VkBufferMemoryRequirementsInfo2 memReqInfo = {};
         memReqInfo.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2;
         memReqInfo.buffer = mBuffer;
 
         VkMemoryRequirements2 memReqs = {};
+        memReqs.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
+
         vkGetBufferMemoryRequirements2(mDevice->handle(), &memReqInfo, &memReqs);
 
         uint32_t memoryTypeIndex = findMemoryType(
@@ -56,6 +60,8 @@ namespace Compute {
             destroyBuffer()
         );
 
+        spdlog::debug("Allocated {} of bytes of memory for a storage buffer", mSize);
+
         VkBindBufferMemoryInfo bindInfo = {};
         bindInfo.sType = VK_STRUCTURE_TYPE_BIND_BUFFER_MEMORY_INFO;
         bindInfo.buffer = mBuffer;
@@ -70,6 +76,8 @@ namespace Compute {
                 destroyBuffer();
             }
         );
+
+        spdlog::debug("Bound memory and buffer together");
     }
     
     StorageBuffer::~StorageBuffer() {
