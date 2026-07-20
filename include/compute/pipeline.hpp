@@ -50,14 +50,15 @@ namespace Compute {
         }
 
     private:
-        void destroyPipelineLayout();
-        void destroySetLayout();
+        void destroyResources();
 
         std::shared_ptr<Device> mDevice = nullptr;
 
         ReflectLayout mReflectLayout;
 
-        std::vector<VkDescriptorSetLayout> mSetLayouts;
+        VkDescriptorSetLayout mBindlessLayout = VK_NULL_HANDLE;
+        VkDescriptorSet mBindlessSet = VK_NULL_HANDLE;
+        VkDescriptorPool mDescriptorPool = VK_NULL_HANDLE;
         VkPipelineLayout mLayout = VK_NULL_HANDLE;
         VkPipeline mPipeline = VK_NULL_HANDLE;
     };
