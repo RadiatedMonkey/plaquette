@@ -31,21 +31,14 @@ struct XoshiroRng {
     }
 
     [mutating]
-    double nextDouble() {
-        uint64_t rand = nextState();
-        double d = double(rand >> 11) * 0x1.0p-53;
-
-        // Scale from [0, 1) to [-1, 1]
-        return fma(d, 2.0, -1.0);
-    }
-
-    [mutating]
     float nextFloat() {
-        uint64_t rand = nextState();
-        float f = float(rand >> 40) * 0x1.0p-23f;
+        uint64_t state = nextState();
 
-        // Scale from [0, 1) to [-1, 1]
-        return fma(f, 2.0f, -1.0f);
+        // Take high quality upper 32 bits.
+        uint hi = uint(state >> 32);
+
+        // Then extract the top 24 bits and divide by 2^24 to map it to [0,1).
+        return float(hi >> 8) * (1.0f / 16777216.0f); // 1 / 2^24
     }
 };
 

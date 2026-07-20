@@ -7,18 +7,40 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
+#include <iostream>
 #include <vector>
 #include <memory>
+
+static constexpr uint32_t RNG_NUM_COUNT = 1024;
 
 static const std::vector<float> firstData = {1, 2, 16};
 static const std::vector<float> secondData = {3, 2, 1};
 
-#pragma pack(push, 1)
 struct PushConstants {
     uint64_t baseSeed;
     uint32_t totalSites;
+    uint32_t pad0;
+    VkDeviceAddress output;
 };
-#pragma pack(pop)
+
+void printBuckets(const std::vector<float>& results) {
+    static constexpr size_t BUCKET_COUNT = 10;
+
+    std::array<uint32_t, BUCKET_COUNT> buckets = {};
+    for(float num : results) {
+        float ratio = static_cast<float>(BUCKET_COUNT) * num;
+        uint32_t bucket = static_cast<uint32_t>(std::floor(ratio));
+
+        buckets[bucket]++;
+    }
+
+    for(uint32_t i = 0; i < BUCKET_COUNT; i++) {
+        uint32_t bucket = buckets[i];
+        std::cout << i << ": (" << bucket << "): " << std::string(bucket, '*') << std::endl;
+    }
+
+    std::cout << "Expected average of " << static_cast<float>(RNG_NUM_COUNT) / static_cast<float>(BUCKET_COUNT) << " per bucket" << std::endl;
+}
 
 int main() {
     auto logger = spdlog::stdout_color_mt("logger");
@@ -41,78 +63,22 @@ int main() {
             "Failed to start command buffer"
         );
 
-        auto staging = device->createHostBuffer<float>(firstData.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
-        {
-            auto mapped = staging->map();
-            std::memcpy(mapped.get(), firstData.data(), firstData.size() * sizeof(float));
-        }
-
-        auto staging2 = device->createHostBuffer<float>(secondData.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
-        {
-            auto mapped = staging2->map();
-            std::memcpy(mapped.get(), secondData.data(), secondData.size() * sizeof(float));
-        }
-
-        auto firstBuffer = device->createStorageBuffer<float>(firstData.size(), VK_BUFFER_USAGE_TRANSFER_DST_BIT);
-        auto secondBuffer = device->createStorageBuffer<float>(secondData.size(), VK_BUFFER_USAGE_TRANSFER_DST_BIT);
-        auto resultBuffer = device->createStorageBuffer<float>(secondData.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
-
-        VkBufferCopy2 copyRegion = {};
-        copyRegion.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
-        copyRegion.srcOffset = 0;
-        copyRegion.dstOffset = 0;
-        copyRegion.size = staging->size();
-
-        VkCopyBufferInfo2 copyInfo = {};
-        copyInfo.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
-        copyInfo.srcBuffer = staging->handle();
-        copyInfo.dstBuffer = firstBuffer->handle();
-        copyInfo.regionCount = 1;
-        copyInfo.pRegions = &copyRegion;
-
-        vkCmdCopyBuffer2(cmds.handle(), &copyInfo);
-
-        copyInfo.srcBuffer = staging2->handle();
-        copyInfo.dstBuffer = secondBuffer->handle();
-
-        vkCmdCopyBuffer2(cmds.handle(), &copyInfo);
-
-        std::array<VkBuffer, 2> buffers = {
-            firstBuffer->handle(), secondBuffer->handle()
-        };
-        std::array<VkBufferMemoryBarrier2, 2> memBarriers = {};
-
-        for(uint32_t i = 0; i < memBarriers.size(); i++) {
-            VkBufferMemoryBarrier2& memBarrier = memBarriers[i];
-            memBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
-            memBarrier.buffer = buffers[i];
-            memBarrier.offset = 0;
-            memBarrier.size = VK_WHOLE_SIZE;
-            memBarrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
-            memBarrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
-            memBarrier.dstStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
-            memBarrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
-        }
-
-        VkDependencyInfo depInfo = {};
-        depInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-        depInfo.bufferMemoryBarrierCount = memBarriers.size();
-        depInfo.pBufferMemoryBarriers = memBarriers.data();
-
-        vkCmdPipelineBarrier2(cmds.handle(), &depInfo);
+        auto outBuffer = device->createStorageBuffer<float>(RNG_NUM_COUNT, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+        auto hostOutBuffer = device->createHostBuffer<float>(RNG_NUM_COUNT, VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 
         PushConstants pushConstants = {
-            .baseSeed = 1,
-            .totalSites = 10
+            .baseSeed = 0,
+            .totalSites = RNG_NUM_COUNT,
+            .output = outBuffer->address()
         };
 
         vkCmdBindPipeline(cmds.handle(), VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->handle());
         vkCmdPushConstants(cmds.handle(), pipeline->layout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants), &pushConstants);
-        vkCmdDispatch(cmds.handle(), firstData.size(), 1, 1);
+        vkCmdDispatch(cmds.handle(), (RNG_NUM_COUNT + 64 - 1) / 64, 1, 1);
 
         VkBufferMemoryBarrier2 resultBarrier = {};
         resultBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
-        resultBarrier.buffer = resultBuffer->handle();
+        resultBarrier.buffer = outBuffer->handle();
         resultBarrier.srcStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
         resultBarrier.srcAccessMask = VK_ACCESS_2_SHADER_WRITE_BIT;
         resultBarrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
@@ -120,14 +86,25 @@ int main() {
         resultBarrier.offset = 0;
         resultBarrier.size = VK_WHOLE_SIZE;
 
+        VkDependencyInfo depInfo = {};
+        depInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
         depInfo.bufferMemoryBarrierCount = 1;
         depInfo.pBufferMemoryBarriers = &resultBarrier;
 
         vkCmdPipelineBarrier2(cmds.handle(), &depInfo);
 
-        // Copy region stay the same
-        copyInfo.dstBuffer = staging->handle();
-        copyInfo.srcBuffer = resultBuffer->handle();
+        VkBufferCopy2 copyRegion = {};
+        copyRegion.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
+        copyRegion.srcOffset = 0;
+        copyRegion.dstOffset = 0;
+        copyRegion.size = RNG_NUM_COUNT * sizeof(float);
+
+        VkCopyBufferInfo2 copyInfo = {};
+        copyInfo.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
+        copyInfo.regionCount = 1;
+        copyInfo.pRegions = &copyRegion;
+        copyInfo.dstBuffer = hostOutBuffer->handle();
+        copyInfo.srcBuffer = outBuffer->handle();
 
         vkCmdCopyBuffer2(cmds.handle(), &copyInfo);
 
@@ -175,12 +152,17 @@ int main() {
         vkDestroyFence(device->handle(), fence, nullptr);
         spdlog::debug("Destroyed fence");
 
-        auto mapped = staging->map();
+        auto mapped = hostOutBuffer->map();
 
-        std::vector<float> results(3);
-        std::memcpy(results.data(), mapped.get(), 3 * sizeof(float));
+        std::vector<float> results(RNG_NUM_COUNT);
+        std::memcpy(results.data(), mapped.get(), RNG_NUM_COUNT * sizeof(float));
 
-        spdlog::info("Results are {}, {}, {}", results[0], results[1], results[2]);
+        // for (float result : results) {
+        //     std::cout << result << " ";
+        // }
+        // std::cout << std::endl;
+
+        printBuckets(results);
     } catch(const std::exception& e) {
         spdlog::error("exception: {}", e.what());
         return 1;

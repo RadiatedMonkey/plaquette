@@ -66,7 +66,7 @@ namespace Compute {
             destroyBuffer()
         );
 
-        spdlog::debug("Allocated {} of bytes of memory for a storage buffer", mSize);
+        spdlog::debug("Allocated {} bytes of memory for a storage buffer", memoryCi.allocationSize);
 
         VkBindBufferMemoryInfo bindInfo = {};
         bindInfo.sType = VK_STRUCTURE_TYPE_BIND_BUFFER_MEMORY_INFO;

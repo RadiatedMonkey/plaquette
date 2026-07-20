@@ -4,7 +4,7 @@ __include rand;
 __include config;
 
 [shader("compute")]
-[numthreads(32, 1, 1)]
+[numthreads(64, 1, 1)]
 void main(
     uint3 dispatchThreadID: SV_DispatchThreadID
 ) {
@@ -13,7 +13,7 @@ void main(
     }
 
     XoshiroRng rng = XoshiroRng(dispatchThreadID, params.baseSeed);
-    double d = rng.nextDouble();
+    float f = rng.nextFloat();
 
-    printf("%f", d);
+    params.output[dispatchThreadID.x] = f;
 }
