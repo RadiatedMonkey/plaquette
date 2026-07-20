@@ -116,14 +116,17 @@ namespace Compute {
         ///
         /// @param device The device to create this buffer on.
         /// @param size The number of elements of type `T` to fit into this buffer.
-        HostBuffer(std::shared_ptr<Device> device, uint64_t size)
+        /// @param usageFlags Buffer usage flags
+        HostBuffer(std::shared_ptr<Device> device, uint64_t size, VkBufferUsageFlags usageFlags)
             : mDevice(std::move(device)), mSize(size * sizeof(T))
         {
             VkBufferCreateInfo bufferCi = {};
             bufferCi.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
             bufferCi.size = mSize;
             bufferCi.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-            bufferCi.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+
+            // Allow both copying to and from host buffers.
+            bufferCi.usage = usageFlags;
 
             LOG_VKRESULT(
                 vkCreateBuffer(mDevice->handle(), &bufferCi, nullptr, &mBuffer),
@@ -215,7 +218,8 @@ namespace Compute {
         ///
         /// @param device The device to create the storage buffer on.
         /// @param size The size in bytes of the buffer to be created.
-        StorageBuffer(std::shared_ptr<Device> device, VkDeviceSize size);
+        /// @param usageFlags Usage flags for this buffer (on top of VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT and VK_BUFFER_USAGE_STORAGE_BUFFER_BIT).
+        StorageBuffer(std::shared_ptr<Device> device, VkDeviceSize size, VkBufferUsageFlags usageFlags);
 
         void freeMemory();
         void destroyBuffer();
@@ -230,12 +234,12 @@ namespace Compute {
     // These are defined here to avoid a circular dependency between storage.hpp and device.hpp.
 
     template<typename T>
-    std::shared_ptr<HostBuffer<T>> Device::createHostBuffer(uint64_t size) {
-        return std::shared_ptr<HostBuffer<T>>(new HostBuffer<T>(shared_from_this(), size));
+    std::shared_ptr<HostBuffer<T>> Device::createHostBuffer(uint64_t size, VkBufferUsageFlags usageFlags) {
+        return std::shared_ptr<HostBuffer<T>>(new HostBuffer<T>(shared_from_this(), size, usageFlags));
     }
 
     template<typename T>
-    std::shared_ptr<StorageBuffer> Device::createStorageBuffer(uint64_t size) {
-        return std::shared_ptr<StorageBuffer>(new StorageBuffer(shared_from_this(), size * sizeof(T)));
+    std::shared_ptr<StorageBuffer> Device::createStorageBuffer(uint64_t size, VkBufferUsageFlags usageFlags) {
+        return std::shared_ptr<StorageBuffer>(new StorageBuffer(shared_from_this(), size * sizeof(T), usageFlags));
     }
 }

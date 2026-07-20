@@ -184,6 +184,10 @@ namespace Compute {
         return mDevice;
     }
 
+    VkQueue Device::queue() {
+        return mQueue;
+    }
+
     Commands Device::createCmdBuffer() {
         VkCommandBufferAllocateInfo bufferCi = {};
         bufferCi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;

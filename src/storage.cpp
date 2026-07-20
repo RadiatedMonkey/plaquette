@@ -18,14 +18,15 @@ namespace Compute {
         return UINT32_MAX;
     }
 
-    StorageBuffer::StorageBuffer(std::shared_ptr<Device> device, VkDeviceSize size) 
+    StorageBuffer::StorageBuffer(std::shared_ptr<Device> device, VkDeviceSize size, VkBufferUsageFlags usageFlags)
         : mDevice(std::move(device)), mSize(size) 
     {
         VkBufferCreateInfo bufferCi = {};
         bufferCi.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         bufferCi.size = mSize;
         bufferCi.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        bufferCi.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        // bufferCi.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        bufferCi.usage = usageFlags | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 
         LOG_VKRESULT(
             vkCreateBuffer(mDevice->handle(), &bufferCi, nullptr, &mBuffer),

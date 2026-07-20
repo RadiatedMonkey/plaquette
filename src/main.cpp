@@ -40,21 +40,21 @@ int main() {
             "Failed to start command buffer"
         );
 
-        auto staging = device->createHostBuffer<float>(firstData.size());
+        auto staging = device->createHostBuffer<float>(firstData.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
         {
             auto mapped = staging->map();
             std::memcpy(mapped.get(), firstData.data(), firstData.size() * sizeof(float));
         }
 
-        auto staging2 = device->createHostBuffer<float>(secondData.size());
+        auto staging2 = device->createHostBuffer<float>(secondData.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
         {
             auto mapped = staging2->map();
             std::memcpy(mapped.get(), secondData.data(), secondData.size() * sizeof(float));
         }
 
-        auto firstBuffer = device->createStorageBuffer<float>(firstData.size());
-        auto secondBuffer = device->createStorageBuffer<float>(secondData.size());
-        auto resultBuffer = device->createStorageBuffer<float>(secondData.size());
+        auto firstBuffer = device->createStorageBuffer<float>(firstData.size(), VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+        auto secondBuffer = device->createStorageBuffer<float>(secondData.size(), VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+        auto resultBuffer = device->createStorageBuffer<float>(secondData.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
 
         VkBufferCopy2 copyRegion = {};
         copyRegion.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
@@ -110,10 +110,71 @@ int main() {
         vkCmdPushConstants(cmds.handle(), pipeline->layout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants), &pushConstants);
         vkCmdDispatch(cmds.handle(), firstData.size(), 1, 1);
 
+        VkBufferMemoryBarrier2 resultBarrier = {};
+        resultBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
+        resultBarrier.buffer = resultBuffer->handle();
+        resultBarrier.srcStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+        resultBarrier.srcAccessMask = VK_ACCESS_2_SHADER_WRITE_BIT;
+        resultBarrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+        resultBarrier.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
+        resultBarrier.offset = 0;
+        resultBarrier.size = VK_WHOLE_SIZE;
+
+        depInfo.bufferMemoryBarrierCount = 1;
+        depInfo.pBufferMemoryBarriers = &resultBarrier;
+
+        vkCmdPipelineBarrier2(cmds.handle(), &depInfo);
+
+        // Copy region stay the same
+        copyInfo.dstBuffer = staging->handle();
+        copyInfo.srcBuffer = resultBuffer->handle();
+
+        vkCmdCopyBuffer2(cmds.handle(), &copyInfo);
+
         LOG_VKRESULT(
             vkEndCommandBuffer(cmds.handle()),
             "Failed to end command buffer"
         );
+
+        VkCommandBufferSubmitInfo cmdInfo = {};
+        cmdInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+        cmdInfo.commandBuffer = cmds.handle();
+
+        VkSubmitInfo2 submitInfo = {};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+        submitInfo.commandBufferInfoCount = 1;
+        submitInfo.pCommandBufferInfos = &cmdInfo;
+        
+        VkFenceCreateInfo fenceCi = {};
+        fenceCi.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+        VkFence fence = VK_NULL_HANDLE;
+        LOG_VKRESULT(
+            vkCreateFence(device->handle(), &fenceCi, nullptr, &fence),
+            "Failed to create fence"
+        );
+
+        CHECK_VKRESULT(
+            vkQueueSubmit2(device->queue(), 1, &submitInfo, fence),
+            "Failed to submit command buffer to queue",
+            {
+                vkDestroyFence(device->handle(), fence, nullptr);
+                spdlog::debug("Destroyed fence");
+            }
+        );
+
+        CHECK_VKRESULT(
+            vkWaitForFences(device->handle(), 1, &fence, VK_TRUE, UINT64_MAX),
+            "Failed to wait for queue fence",
+            {
+                vkDestroyFence(device->handle(), fence, nullptr);
+                spdlog::debug("Destroyed fence");
+            }
+        );
+
+        vkDestroyFence(device->handle(), fence, nullptr);
+        spdlog::debug("Destroyed fence");
+        
     } catch(const std::exception& e) {
         spdlog::error("exception: {}", e.what());
         return 1;

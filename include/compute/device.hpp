@@ -20,12 +20,15 @@ namespace Compute {
         /// @brief The raw Vulkan handle to this device.
         VkDevice handle();
 
+        /// @brief The device queue.
+        VkQueue queue();
+
         /// @brief Creates a host-visible, host-coherent buffer.
         /// @param size The size in elements of the buffer to create.
         ///
         /// @note This can be used as a staging buffer to populate device local buffers.
         template<typename T>
-        std::shared_ptr<HostBuffer<T>> createHostBuffer(uint64_t size);
+        std::shared_ptr<HostBuffer<T>> createHostBuffer(uint64_t size, VkBufferUsageFlags usageFlags);
 
         /// @brief Creates a device-local storage buffer of specified size.
         /// @param size The amount of elements of type `T` to fit into this buffer.
@@ -33,7 +36,7 @@ namespace Compute {
         /// @note This buffer cannot be mapped to host memory directly and must be populated by
         /// transferring from a staging buffer.
         template<typename T>
-        std::shared_ptr<StorageBuffer> createStorageBuffer(uint64_t size);
+        std::shared_ptr<StorageBuffer> createStorageBuffer(uint64_t size, VkBufferUsageFlags usageFlags);
 
         /// @brief The raw Vulkan command pool handle.
         VkCommandPool cmdPool();
