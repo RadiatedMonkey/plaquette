@@ -1,10 +1,10 @@
-#include <compute/reflection.hpp>
-#include <compute/device.hpp>
+#include <plaquette/reflection.hpp>
+#include <plaquette/device.hpp>
 
 #include <spdlog/spdlog.h>
 #include <volk.h>
 
-namespace Compute {
+namespace Plaq {
     ReflectLayout::ReflectLayout(SpvReflectShaderModule module) {
 
     }

@@ -5,13 +5,15 @@
 #define VK_NO_PROTOTYPES
 #include <vulkan/vulkan.h>
 
-namespace Compute {
+namespace Plaq {
     class Device;
 
     class Instance : public std::enable_shared_from_this<Instance> {
     public:
         static std::shared_ptr<Instance> create();
 
+        Instance(Instance&& other) noexcept;
+        Instance(const Instance&) = delete;
         ~Instance();
 
         std::shared_ptr<Device> createDevice();

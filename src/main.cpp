@@ -1,8 +1,8 @@
-#include <compute/instance.hpp>
-#include <compute/device.hpp>
-#include <compute/pipeline.hpp>
-#include <compute/storage.hpp>
-#include <compute/log.hpp>
+#include <plaquette/instance.hpp>
+#include <plaquette/device.hpp>
+#include <plaquette/pipeline.hpp>
+#include <plaquette/storage.hpp>
+#include <plaquette/util.hpp>
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -16,11 +16,19 @@ static constexpr uint32_t RNG_NUM_COUNT = 1024;
 static const std::vector<float> firstData = {1, 2, 16};
 static const std::vector<float> secondData = {3, 2, 1};
 
+template<typename T> requires std::is_floating_point_v<T>
+struct DeviceLattice {
+    std::array<uint32_t, 4> dimensions;
+    uint32_t totalSites;
+    T spacing;
+    VkDeviceAddress buffer;  
+};
+
+template<typename T> requires std::is_floating_point_v<T>
 struct PushConstants {
     uint64_t baseSeed;
-    uint32_t totalSites;
-    uint32_t pad0;
     VkDeviceAddress output;
+    DeviceLattice<T> lattice;
 };
 
 template<typename T> requires std::is_floating_point_v<T>
@@ -46,15 +54,21 @@ void printBuckets(const std::vector<T>& results) {
 }
 
 int main() {
+    static constexpr const char* COMPUTE_SPV_PATH = BUILD_DIR "/shaders/compute.spv";
+
     auto logger = spdlog::stdout_color_mt("logger");
 
     spdlog::set_level(spdlog::level::trace);
     spdlog::trace("Logger initialized");
 
+    Plaq::PipelineConfig pipelineConfig = {
+        .shaderPath = COMPUTE_SPV_PATH
+    };
+
     try {
-        auto instance = Compute::Instance::create();
+        auto instance = Plaq::Instance::create();
         auto device = instance->createDevice();
-        auto pipeline = std::make_shared<Compute::Pipeline>(device);
+        auto pipeline = device->createPipeline(pipelineConfig);
 
         auto cmds = device->createCmdBuffer();
 
@@ -69,14 +83,23 @@ int main() {
         auto outBuffer = device->createStorageBuffer<double>(RNG_NUM_COUNT, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
         auto hostOutBuffer = device->createHostBuffer<double>(RNG_NUM_COUNT, VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 
-        PushConstants pushConstants = {
-            .baseSeed = 3,
+        auto latticeBuffer = device->createStorageBuffer<float>(1, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+
+        DeviceLattice<float> lattice = {
+            .dimensions = { 1, 1, 1, 1 },
             .totalSites = RNG_NUM_COUNT,
-            .output = outBuffer->address()
+            .spacing = 1.0f,
+            .buffer = latticeBuffer->address()
+        };
+
+        PushConstants<float> pushConstants = {
+            .baseSeed = 3,
+            .output = outBuffer->address(),
+            .lattice = lattice
         };
 
         vkCmdBindPipeline(cmds.handle(), VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->handle());
-        vkCmdPushConstants(cmds.handle(), pipeline->layout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants), &pushConstants);
+        vkCmdPushConstants(cmds.handle(), pipeline->layout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants<float>), &pushConstants);
         vkCmdDispatch(cmds.handle(), 1, 1, 1);
 
         VkBufferMemoryBarrier2 resultBarrier = {};

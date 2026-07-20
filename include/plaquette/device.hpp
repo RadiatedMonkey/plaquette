@@ -5,15 +5,21 @@
 #define VK_NO_PROTOTYPES
 #include <vulkan/vulkan.h>
 
-#include <compute/command.hpp>
+#include <plaquette/command.hpp>
 
-namespace Compute {
+namespace Plaq {
     class Instance;
+    class Pipeline;
+    struct PipelineConfig;
+
     class StorageBuffer;
     template<typename T> class HostBuffer;
 
     class Device : public std::enable_shared_from_this<Device> {
     public:
+        Device(Device&& other) noexcept;
+        Device(const Device&) = delete;
+
         /// @warning The destructor should only run once all device-created resources have been destroyed.
         ~Device();
 
@@ -22,6 +28,8 @@ namespace Compute {
 
         /// @brief The device queue.
         VkQueue queue();
+
+        std::shared_ptr<Pipeline> createPipeline(const PipelineConfig& config);
 
         /// @brief Creates a host-visible, host-coherent buffer.
         /// @param size The size in elements of the buffer to create.
@@ -60,7 +68,7 @@ namespace Compute {
 
         Device(std::shared_ptr<Instance> instance);
 
-        void destroyDevice();
+        void destroyResources();
 
         std::shared_ptr<Instance> mInstance = nullptr;
 

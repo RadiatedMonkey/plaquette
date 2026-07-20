@@ -5,7 +5,7 @@
 #define VK_NO_PROTOTYPES
 #include <vulkan/vulkan.h>
 
-namespace Compute {
+namespace Plaq {
     class Device;
 
     class Commands {

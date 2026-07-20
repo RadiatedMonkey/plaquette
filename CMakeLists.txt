@@ -13,6 +13,7 @@ set(SOURCES
     src/storage.cpp
     src/reflection.cpp
     src/command.cpp
+    src/simulation.cpp
     
     src/spirv_reflect.c
 )

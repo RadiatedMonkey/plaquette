@@ -1,16 +1,16 @@
 #pragma once
 
-#include <compute/device.hpp>
-#include <compute/pipeline.hpp>
-#include <compute/reflection.hpp>
-#include <compute/log.hpp>
+#include <plaquette/device.hpp>
+#include <plaquette/pipeline.hpp>
+#include <plaquette/reflection.hpp>
+#include <plaquette/util.hpp>
 
 #include <memory>
 
 #include <spdlog/spdlog.h>
 #include <volk.h>
 
-namespace Compute {
+namespace Plaq {
     class Device;
 
     template<typename T>
@@ -36,6 +36,12 @@ namespace Compute {
         const T* get() const {
             return mPtr;
         }
+
+        Mapped(Mapped&& other) noexcept : mBuffer(std::move(other.mBuffer)), mPtr(other.mPtr) {
+            other.mPtr = nullptr;
+        }
+
+        Mapped(const Mapped&) = delete;
 
         ~Mapped() {
             VkMemoryUnmapInfo unmapInfo = {};

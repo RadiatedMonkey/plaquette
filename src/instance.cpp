@@ -1,13 +1,13 @@
-#include <compute/instance.hpp>
-#include <compute/device.hpp>
-#include <compute/log.hpp>
+#include <plaquette/instance.hpp>
+#include <plaquette/device.hpp>
+#include <plaquette/util.hpp>
 
 #include <iostream>
 
 #include <volk.h>
 #include <spdlog/spdlog.h>
 
-namespace Compute {
+namespace Plaq {
     unsigned int debugCallback(
         VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
         VkDebugUtilsMessageTypeFlagsEXT messageTypes,
@@ -97,6 +97,11 @@ namespace Compute {
         );
 
         spdlog::debug("Created debug utils messenger");
+    }
+
+    Instance::Instance(Instance&& other) noexcept : mInstance(other.mInstance), mDebug(other.mDebug) {
+        other.mInstance = VK_NULL_HANDLE;
+        other.mDebug = VK_NULL_HANDLE;
     }
 
     Instance::~Instance() {

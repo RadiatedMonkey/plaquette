@@ -7,17 +7,17 @@
 #define VK_NO_PROTOTYPES
 #include <vulkan/vulkan.h>
 
-#include <compute/reflection.hpp>
-#include <compute/spirv_reflect.h>
+#include <plaquette/reflection.hpp>
+#include <plaquette/spirv_reflect.h>
 
-namespace Compute {
-    static constexpr const char* COMPUTE_SPV_PATH = BUILD_DIR "/shaders/compute.spv";
-
+namespace Plaq {
     class Device;
 
     class ReflectableShader {
     public:
         ReflectableShader(std::shared_ptr<Device> device, const std::string& filepath);
+        ReflectableShader(ReflectableShader&& other) noexcept;
+        ReflectableShader(const ReflectableShader&) = delete;
         ~ReflectableShader();
 
         VkShaderModule handle() {
@@ -36,9 +36,14 @@ namespace Compute {
         VkShaderModule mModule = VK_NULL_HANDLE;
     };
 
+    struct PipelineConfig {
+        std::string shaderPath;
+    };
+
     class Pipeline {
     public:
-        Pipeline(std::shared_ptr<Device> device);
+        Pipeline(Pipeline&& other) noexcept;
+        Pipeline(const Pipeline&) = delete;
         ~Pipeline();
 
         VkPipeline handle();
@@ -53,6 +58,10 @@ namespace Compute {
         }
 
     private:
+        friend Device;
+
+        Pipeline(std::shared_ptr<Device> device, const PipelineConfig& config);
+
         void destroyResources();
 
         std::shared_ptr<Device> mDevice = nullptr;

@@ -1,11 +1,13 @@
-#include <compute/command.hpp>
-#include <compute/device.hpp>
+#include <plaquette/command.hpp>
+#include <plaquette/device.hpp>
+#include <plaquette/util.hpp>
+
 #include <utility>
 
 #include <volk.h>
 #include <spdlog/spdlog.h>
 
-namespace Compute {
+namespace Plaq {
     VkCommandBuffer Commands::handle() {
         return mBuffer;
     }
@@ -27,10 +29,11 @@ namespace Compute {
     }
 
     void Commands::reset() {
-        VkResult result = vkResetCommandBuffer(mBuffer, 0);
-        if (result != VK_SUCCESS) {
-            spdlog::error("Failed to reset command buffer: {}", static_cast<uint32_t>(result));
-            throw std::runtime_error("Failed to reset command buffer");
-        }
+        assert(mBuffer != VK_NULL_HANDLE);
+
+        LOG_VKRESULT(
+            vkResetCommandBuffer(mBuffer, 0),
+            "Failed to reset command buffer"
+        );
     }
 }

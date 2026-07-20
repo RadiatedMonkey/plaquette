@@ -1,10 +1,10 @@
-#include <compute/storage.hpp>
-#include <compute/device.hpp>
+#include <plaquette/storage.hpp>
+#include <plaquette/device.hpp>
 
 #include <spdlog/spdlog.h>
 #include <volk.h>
 
-namespace Compute {
+namespace Plaq {
     uint32_t findMemoryType(uint32_t typeBits, VkPhysicalDeviceMemoryProperties memProperties, VkMemoryPropertyFlags propertyFlags) {
         for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
             bool hardwareSupported = typeBits & (1 << i);

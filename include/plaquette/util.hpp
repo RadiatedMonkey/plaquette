@@ -1,5 +1,7 @@
 #pragma once
 
+#include <type_traits>
+
 #define LOG_VKRESULT(x, msg) do {                                               \
     VkResult vkresultCheck = (x);                                               \
     if (vkresultCheck != VK_SUCCESS) {                                          \
@@ -19,3 +21,8 @@
         throw std::runtime_error(msg);                                          \
     }                                                                           \
 } while (false)
+
+namespace Plaq {
+    template<typename F>
+    concept RealFloat = std::is_same_v<F, float> || std::is_same_v<F, double>;
+}

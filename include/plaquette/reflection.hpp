@@ -3,11 +3,11 @@
 #define VK_NO_PROTOTYPES
 #include <vulkan/vulkan.h>
 
-#include <compute/spirv_reflect.h>
+#include <plaquette/spirv_reflect.h>
 
 #include <memory>
 
-namespace Compute {
+namespace Plaq {
     class Device;
 
     class Resource {

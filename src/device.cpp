@@ -1,12 +1,14 @@
-#include <compute/device.hpp>
-#include <compute/instance.hpp>
+#include <plaquette/pipeline.hpp>
+#include <plaquette/device.hpp>
+#include <plaquette/instance.hpp>
+#include <plaquette/util.hpp>
 
 #include <volk.h>
 #include <spdlog/spdlog.h>
 
 #include <vector>
 
-namespace Compute {
+namespace Plaq {
     static constexpr const char* ENABLED_DEVICE_EXTENSIONS[] = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
         VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
@@ -16,11 +18,10 @@ namespace Compute {
 
     Device::Device(std::shared_ptr<Instance> instance) : mInstance(std::move(instance)) {
         uint32_t count = 0;
-        VkResult result = vkEnumeratePhysicalDevices(mInstance->handle(), &count, nullptr);
-        if (result != VK_SUCCESS) {
-            spdlog::error("Failed to enumerate physical devices: {}", static_cast<uint32_t>(result));
-            throw std::runtime_error("Failed to enumerate physical devices");
-        }
+        LOG_VKRESULT(
+            vkEnumeratePhysicalDevices(mInstance->handle(), &count, nullptr),
+            "Failed to enumerate physical devices"
+        );
 
         if (count == 0) {
             spdlog::error("Found zero physical devices");
@@ -28,11 +29,10 @@ namespace Compute {
         }
 
         std::vector<VkPhysicalDevice> rawAdapters(count);
-        result = vkEnumeratePhysicalDevices(mInstance->handle(), &count, rawAdapters.data());
-        if (result != VK_SUCCESS) {
-            spdlog::error("Failed to enumerate physical devices: {}", static_cast<uint32_t>(result));
-            throw std::runtime_error("Failed to enumerate physical devices");
-        }
+        LOG_VKRESULT(
+            vkEnumeratePhysicalDevices(mInstance->handle(), &count, rawAdapters.data()),
+            "Failed to enumerate physical devices"
+        );
 
         VkPhysicalDevice chosenAdapter = rawAdapters[0];
         for (VkPhysicalDevice adapter : rawAdapters) {
@@ -130,11 +130,10 @@ namespace Compute {
         deviceCi.enabledLayerCount = 0; // Device layers are deprecated
         deviceCi.pNext = &enabledFeatures;
 
-        result = vkCreateDevice(chosenAdapter, &deviceCi, nullptr, &mDevice);
-        if (result != VK_SUCCESS) {
-            spdlog::error("Failed to create logical device: {}", static_cast<uint32_t>(result));
-            throw std::runtime_error("Failed to create logical device");
-        }
+        LOG_VKRESULT(
+            vkCreateDevice(chosenAdapter, &deviceCi, nullptr, &mDevice),
+            "Failed to create logical device"
+        );
 
         spdlog::debug("Created device");
 
@@ -157,25 +156,36 @@ namespace Compute {
         poolCi.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         poolCi.queueFamilyIndex = mQueueFamilyIndex;
 
-        result = vkCreateCommandPool(mDevice, &poolCi, nullptr, &mPool);
-        if (result != VK_SUCCESS) {
-            destroyDevice();
-
-            spdlog::error("Failed to create command pool: {}", static_cast<uint32_t>(result));
-            throw std::runtime_error("Failed to create command pool");
-        }
+        CHECK_VKRESULT(
+            vkCreateCommandPool(mDevice, &poolCi, nullptr, &mPool),
+            "Failed to create command pool",
+            {
+                destroyResources();
+            }
+        );
     }
 
+    Device::Device(Device&& other) noexcept 
+        : mInstance(std::move(other.mInstance)), mDevice(other.mDevice),
+            mPool(other.mPool), mQueue(other.mQueue), mQueueFamilyIndex(other.mQueueFamilyIndex),
+            mMemProperties(other.mMemProperties), mFeatures(other.mFeatures), mProperties(other.mProperties)
+    {
+        other.mDevice = VK_NULL_HANDLE;
+        other.mPool = VK_NULL_HANDLE;
+        other.mQueue = VK_NULL_HANDLE;
+        other.mQueueFamilyIndex = UINT32_MAX;
+    }   
+
     Device::~Device() {
+        destroyResources();
+    }
+
+    void Device::destroyResources() {
         if (mPool != VK_NULL_HANDLE) {
             vkDestroyCommandPool(mDevice, mPool, nullptr);
             spdlog::debug("Destroyed command pool");
         }
 
-        destroyDevice();
-    }
-
-    void Device::destroyDevice() {
         if (mDevice != VK_NULL_HANDLE) {
             vkDestroyDevice(mDevice, nullptr);
             spdlog::debug("Destroyed logical device");
@@ -190,7 +200,13 @@ namespace Compute {
         return mQueue;
     }
 
+    std::shared_ptr<Pipeline> Device::createPipeline(const PipelineConfig& config) {
+        return std::shared_ptr<Pipeline>(new Pipeline(shared_from_this(), config));
+    }
+
     Commands Device::createCmdBuffer() {
+        assert(mPool != VK_NULL_HANDLE);
+
         VkCommandBufferAllocateInfo bufferCi = {};
         bufferCi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         bufferCi.commandPool = mPool;
@@ -200,11 +216,7 @@ namespace Compute {
         std::shared_ptr<Device> device = shared_from_this();
 
         VkCommandBuffer buffer = VK_NULL_HANDLE;
-        VkResult result = vkAllocateCommandBuffers(mDevice, &bufferCi, &buffer);
-        if (result != VK_SUCCESS) {
-            spdlog::error("Failed to allocate command buffers: {}", static_cast<uint32_t>(result));
-            throw std::runtime_error("Failed to allocate command buffers");
-        }
+        LOG_VKRESULT(vkAllocateCommandBuffers(mDevice, &bufferCi, &buffer), "Failed to allocate command buffers");
 
         return { std::move(device), buffer };
     }
