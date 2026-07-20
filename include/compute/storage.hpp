@@ -42,7 +42,7 @@ namespace Compute {
             unmapInfo.sType = VK_STRUCTURE_TYPE_MEMORY_UNMAP_INFO;
             unmapInfo.memory = mBuffer->memory();
 
-            VkResult result = vkUnmapMemory2(mBuffer->mDevice->handle(), &unmapInfo);
+            VkResult result = vkUnmapMemory2KHR(mBuffer->mDevice->handle(), &unmapInfo);
             if (result != VK_SUCCESS) {
                 spdlog::error("Failed to unmap memory");
                 // No exception is thrown here since this error is not critical
@@ -68,7 +68,7 @@ namespace Compute {
             mapInfo.offset = 0;
 
             LOG_VKRESULT(
-                vkMapMemory2(mBuffer->mDevice->handle(), &mapInfo, reinterpret_cast<void**>(&mPtr)),
+                vkMapMemory2KHR(mBuffer->mDevice->handle(), &mapInfo, reinterpret_cast<void**>(&mPtr)),
                 "Failed to map memory to host buffer"
             );
 
