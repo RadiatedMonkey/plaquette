@@ -8,12 +8,15 @@ __include config;
 void main(
     uint3 dispatchThreadID: SV_DispatchThreadID
 ) {
+    uint rngsPerThread = params.totalSites / 64;
+
     if (dispatchThreadID.x > params.totalSites) {
         return; // Thread is outside of lattice
     }
 
     XoshiroRng rng = XoshiroRng(dispatchThreadID, params.baseSeed);
-    double f = rng.nextDouble();
-
-    params.output[dispatchThreadID.x] = f;
+    for (uint i = 0; i < rngsPerThread; i++) {
+        double f = double(rng.nextFloat());
+        params.output[rngsPerThread * dispatchThreadID.x + i] = f;
+    }
 }

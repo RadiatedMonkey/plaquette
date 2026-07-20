@@ -32,6 +32,8 @@ void printBuckets(const std::vector<T>& results) {
         double ratio = static_cast<double>(BUCKET_COUNT) * num;
         uint32_t bucket = static_cast<uint32_t>(std::floor(ratio));
 
+        if(bucket >= 10) bucket = 9;
+
         buckets[bucket]++;
     }
 
@@ -68,14 +70,14 @@ int main() {
         auto hostOutBuffer = device->createHostBuffer<double>(RNG_NUM_COUNT, VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 
         PushConstants pushConstants = {
-            .baseSeed = 0,
+            .baseSeed = 3,
             .totalSites = RNG_NUM_COUNT,
             .output = outBuffer->address()
         };
 
         vkCmdBindPipeline(cmds.handle(), VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->handle());
         vkCmdPushConstants(cmds.handle(), pipeline->layout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants), &pushConstants);
-        vkCmdDispatch(cmds.handle(), (RNG_NUM_COUNT + 64 - 1) / 64, 1, 1);
+        vkCmdDispatch(cmds.handle(), 1, 1, 1);
 
         VkBufferMemoryBarrier2 resultBarrier = {};
         resultBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
@@ -158,10 +160,10 @@ int main() {
         std::vector<double> results(RNG_NUM_COUNT);
         std::memcpy(results.data(), mapped.get(), RNG_NUM_COUNT * sizeof(double));
 
-        // for (float result : results) {
-        //     std::cout << result << " ";
-        // }
-        // std::cout << std::endl;
+        for (float result : results) {
+            std::cout << result << " ";
+        }
+        std::cout << std::endl;
 
         printBuckets(results);
     } catch(const std::exception& e) {
