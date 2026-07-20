@@ -8,7 +8,8 @@
 
 namespace Compute {
     static constexpr const char* ENABLED_DEVICE_EXTENSIONS[] = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME
     };
 
     Device::Device(std::shared_ptr<Instance> instance) : mInstance(std::move(instance)) {
@@ -83,12 +84,22 @@ namespace Compute {
         VkPhysicalDeviceSynchronization2Features sync2Features = {};
         sync2Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES;
         sync2Features.pNext = &descriptorFeatures;
+        
+        VkPhysicalDeviceBufferDeviceAddressFeatures addressFeatures = {};
+        addressFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
+        addressFeatures.pNext = &sync2Features;
 
         VkPhysicalDeviceFeatures2 enabledFeatures = {};
         enabledFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-        enabledFeatures.pNext = &sync2Features;
+        enabledFeatures.pNext = &addressFeatures;
 
         vkGetPhysicalDeviceFeatures2(chosenAdapter, &enabledFeatures);
+
+        if (!addressFeatures.bufferDeviceAddress) {
+            throw std::runtime_error("This device does not support buffer device addressess");
+        }
+
+        spdlog::trace("Adapter supports buffer device addressess");
 
         if (!sync2Features.synchronization2) {
             throw std::runtime_error("This device does not support synchronization2");
