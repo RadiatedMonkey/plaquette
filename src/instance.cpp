@@ -48,7 +48,7 @@ namespace Compute {
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         appInfo.pApplicationName = "Compute";
         appInfo.applicationVersion = 1;
-        appInfo.apiVersion = VK_API_VERSION_1_4;
+        appInfo.apiVersion = VK_API_VERSION_1_3;
 
         VkValidationFeatureEnableEXT printFeature = VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT;
 
