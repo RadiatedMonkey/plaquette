@@ -25,7 +25,7 @@ namespace Compute {
         bufferCi.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         bufferCi.size = mSize;
         bufferCi.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        bufferCi.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        bufferCi.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 
         LOG_VKRESULT(
             vkCreateBuffer(mDevice->handle(), &bufferCi, nullptr, &mBuffer),
@@ -49,8 +49,13 @@ namespace Compute {
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         );
 
+        VkMemoryAllocateFlagsInfo flagsInfo = {};
+        flagsInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
+        flagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
+
         VkMemoryAllocateInfo memoryCi = {};
         memoryCi.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        memoryCi.pNext = &flagsInfo;
         memoryCi.memoryTypeIndex = memoryTypeIndex;
         memoryCi.allocationSize = memReqs.memoryRequirements.size;
 
@@ -83,6 +88,14 @@ namespace Compute {
     StorageBuffer::~StorageBuffer() {
         freeMemory();
         destroyBuffer();
+    }
+
+    VkDeviceAddress StorageBuffer::address() {
+        VkBufferDeviceAddressInfo addressInfo = {};
+        addressInfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+        addressInfo.buffer = mBuffer;
+
+        return vkGetBufferDeviceAddress(mDevice->handle(), &addressInfo);
     }
 
     VkBuffer StorageBuffer::handle() {

@@ -13,6 +13,12 @@
 static const std::vector<float> firstData = {1, 2, 3};
 static const std::vector<float> secondData = {3, 2, 1};
 
+struct PushConstants {
+    VkDeviceAddress buffer0;
+    VkDeviceAddress buffer1;
+    VkDeviceAddress result;
+};
+
 int main() {
     auto logger = spdlog::stdout_color_mt("logger");
 
@@ -22,6 +28,7 @@ int main() {
     try {
         auto instance = Compute::Instance::create();
         auto device = instance->createDevice();
+        auto pipeline = std::make_shared<Compute::Pipeline>(device);
 
         auto cmds = device->createCmdBuffer();
 
@@ -69,12 +76,44 @@ int main() {
 
         vkCmdCopyBuffer2(cmds.handle(), &copyInfo);
 
+        std::array<VkBuffer, 2> buffers = {
+            firstBuffer->handle(), secondBuffer->handle()
+        };
+        std::array<VkBufferMemoryBarrier2, 2> memBarriers = {};
+
+        for(uint32_t i = 0; i < memBarriers.size(); i++) {
+            VkBufferMemoryBarrier2& memBarrier = memBarriers[i];
+            memBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
+            memBarrier.buffer = buffers[i];
+            memBarrier.offset = 0;
+            memBarrier.size = VK_WHOLE_SIZE;
+            memBarrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+            memBarrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+            memBarrier.dstStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+            memBarrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
+        }
+
+        VkDependencyInfo depInfo = {};
+        depInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+        depInfo.bufferMemoryBarrierCount = memBarriers.size();
+        depInfo.pBufferMemoryBarriers = memBarriers.data();
+
+        vkCmdPipelineBarrier2(cmds.handle(), &depInfo);
+
+        PushConstants pushConstants = {
+            .buffer0 = firstBuffer->address(),
+            .buffer1 = secondBuffer->address(),
+            .result = resultBuffer->address()
+        };
+
+        vkCmdBindPipeline(cmds.handle(), VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->handle());
+        vkCmdPushConstants(cmds.handle(), pipeline->layout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants), &pushConstants);
+        vkCmdDispatch(cmds.handle(), firstData.size(), 1, 1);
+
         LOG_VKRESULT(
             vkEndCommandBuffer(cmds.handle()),
             "Failed to end command buffer"
         );
-
-        auto pipeline = std::make_shared<Compute::Pipeline>(device);
     } catch(const std::exception& e) {
         spdlog::error("exception: {}", e.what());
         return 1;

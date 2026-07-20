@@ -41,6 +41,9 @@ namespace Compute {
         Pipeline(std::shared_ptr<Device> device);
         ~Pipeline();
 
+        VkPipeline handle();
+        VkPipelineLayout layout();
+
         ReflectLayout& resources() {
             return mReflectLayout;
         }

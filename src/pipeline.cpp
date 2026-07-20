@@ -295,6 +295,14 @@ namespace Compute {
         destroyResources();
     }
 
+    VkPipelineLayout Pipeline::layout() {
+        return mLayout;
+    }
+
+    VkPipeline Pipeline::handle() {
+        return mPipeline;
+    }
+
     void Pipeline::destroyResources() {
         if (mPipeline != VK_NULL_HANDLE) {
             vkDestroyPipeline(mDevice->handle(), mPipeline, nullptr);

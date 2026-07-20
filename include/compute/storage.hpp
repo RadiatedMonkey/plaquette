@@ -205,6 +205,7 @@ namespace Compute {
     public:
         ~StorageBuffer();
 
+        VkDeviceAddress address();
         VkBuffer handle();
 
     private:
