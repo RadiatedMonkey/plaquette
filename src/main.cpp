@@ -13,11 +13,12 @@
 static const std::vector<float> firstData = {1, 2, 16};
 static const std::vector<float> secondData = {3, 2, 1};
 
+#pragma pack(push, 1)
 struct PushConstants {
-    VkDeviceAddress buffer0;
-    VkDeviceAddress buffer1;
-    VkDeviceAddress result;
+    uint64_t baseSeed;
+    uint32_t totalSites;
 };
+#pragma pack(pop)
 
 int main() {
     auto logger = spdlog::stdout_color_mt("logger");
@@ -101,9 +102,8 @@ int main() {
         vkCmdPipelineBarrier2(cmds.handle(), &depInfo);
 
         PushConstants pushConstants = {
-            .buffer0 = firstBuffer->address(),
-            .buffer1 = secondBuffer->address(),
-            .result = resultBuffer->address()
+            .baseSeed = 1,
+            .totalSites = 10
         };
 
         vkCmdBindPipeline(cmds.handle(), VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->handle());

@@ -252,6 +252,8 @@ namespace Compute {
             pushConstants[i] = pushConstant;
         }
 
+        spdlog::info("Registered {} push constant block(s)", pushConstants.size());
+
         VkPipelineLayoutCreateInfo layoutCi = {};
         layoutCi.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         layoutCi.pushConstantRangeCount = pushConstants.size();

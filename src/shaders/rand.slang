@@ -1,0 +1,64 @@
+implementing lqft;
+
+/// Implements xoshiro256+
+struct XoshiroRng {
+    uint64_t mState[4];
+
+    __init(uint3 dispatchThreadID, uint64_t baseSeed) {
+        uint64_t threadID = dispatchThreadID.x;
+        uint64_t state = threadID ^ baseSeed;
+
+        mState[0] = splitmix64(state);
+        mState[1] = splitmix64(state);
+        mState[2] = splitmix64(state);
+        mState[3] = splitmix64(state);
+    }
+
+    [mutating]
+    uint64_t nextState() {
+        uint64_t result = mState[0] + mState[3];
+        uint64_t t = mState[1] << 17;
+
+        mState[2] ^= mState[0];
+        mState[3] ^= mState[1];
+        mState[1] ^= mState[2];
+        mState[0] ^= mState[3];
+
+        mState[2] ^= t;
+        mState[3] = rotl(mState[3], 45);
+
+        return result;
+    }
+
+    [mutating]
+    double nextDouble() {
+        uint64_t rand = nextState();
+        double d = double(rand >> 11) * 0x1.0p-53;
+
+        // Scale from [0, 1) to [-1, 1]
+        return fma(d, 2.0, -1.0);
+    }
+
+    [mutating]
+    float nextFloat() {
+        uint64_t rand = nextState();
+        float f = float(rand >> 40) * 0x1.0p-23f;
+
+        // Scale from [0, 1) to [-1, 1]
+        return fma(f, 2.0f, -1.0f);
+    }
+};
+
+/// splitmix64 to generate a random seed
+uint64_t splitmix64(inout uint64_t state) {
+    state += 0x9e3779b97f4a7c15L;
+
+    uint64_t z = state;
+    z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9L;
+    z = (z ^ (z >> 27)) * 0x94d049bb133111ebL;
+    return z ^ (z >> 31);
+}
+
+uint64_t rotl(uint64_t x, int k) {
+    return (x << k) | (x >> (64 - k));
+}

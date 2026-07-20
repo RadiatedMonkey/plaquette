@@ -9,7 +9,8 @@
 namespace Compute {
     static constexpr const char* ENABLED_DEVICE_EXTENSIONS[] = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME
+        VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
+        VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME
     };
 
     Device::Device(std::shared_ptr<Instance> instance) : mInstance(std::move(instance)) {

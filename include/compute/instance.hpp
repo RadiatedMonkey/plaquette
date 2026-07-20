@@ -6,15 +6,6 @@
 #include <vulkan/vulkan.h>
 
 namespace Compute {
-    static constexpr const char* ENABLED_INSTANCE_EXTENSIONS[] = {
-        VK_KHR_SURFACE_EXTENSION_NAME,
-        VK_KHR_WIN32_SURFACE_EXTENSION_NAME
-    };
-
-    static constexpr const char* ENABLED_INSTANCE_LAYERS[] = {
-        "VK_LAYER_KHRONOS_validation"
-    };
-
     class Device;
 
     class Instance : public std::enable_shared_from_this<Instance> {
@@ -32,6 +23,9 @@ namespace Compute {
     private:
         Instance();
 
+        void destroyResources();
+
+        VkDebugUtilsMessengerEXT mDebug = VK_NULL_HANDLE;
         VkInstance mInstance = VK_NULL_HANDLE;
     };
 }
