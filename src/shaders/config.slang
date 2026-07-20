@@ -4,7 +4,7 @@ struct PushConstants {
     uint64_t baseSeed;
     uint totalSites;
 
-    float* output;
+    double* output;
 };
 
 [vk::push_constant]

@@ -13,7 +13,7 @@ void main(
     }
 
     XoshiroRng rng = XoshiroRng(dispatchThreadID, params.baseSeed);
-    float f = rng.nextFloat();
+    double f = rng.nextDouble();
 
     params.output[dispatchThreadID.x] = f;
 }

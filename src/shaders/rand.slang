@@ -31,6 +31,14 @@ struct XoshiroRng {
     }
 
     [mutating]
+    double nextDouble() {
+        uint64_t state = nextState();
+
+        // Take upper 53 bits
+        return double(state >> 11) * double(1.0 / 9007199254740992.0);
+    }
+
+    [mutating]
     float nextFloat() {
         uint64_t state = nextState();
 

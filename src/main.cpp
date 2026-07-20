@@ -23,12 +23,13 @@ struct PushConstants {
     VkDeviceAddress output;
 };
 
-void printBuckets(const std::vector<float>& results) {
+template<typename T> requires std::is_floating_point_v<T>
+void printBuckets(const std::vector<T>& results) {
     static constexpr size_t BUCKET_COUNT = 10;
 
     std::array<uint32_t, BUCKET_COUNT> buckets = {};
-    for(float num : results) {
-        float ratio = static_cast<float>(BUCKET_COUNT) * num;
+    for(T num : results) {
+        double ratio = static_cast<double>(BUCKET_COUNT) * num;
         uint32_t bucket = static_cast<uint32_t>(std::floor(ratio));
 
         buckets[bucket]++;
@@ -39,7 +40,7 @@ void printBuckets(const std::vector<float>& results) {
         std::cout << i << ": (" << bucket << "): " << std::string(bucket, '*') << std::endl;
     }
 
-    std::cout << "Expected average of " << static_cast<float>(RNG_NUM_COUNT) / static_cast<float>(BUCKET_COUNT) << " per bucket" << std::endl;
+    std::cout << "Expected average of " << static_cast<double>(RNG_NUM_COUNT) / static_cast<double>(BUCKET_COUNT) << " per bucket" << std::endl;
 }
 
 int main() {
@@ -63,8 +64,8 @@ int main() {
             "Failed to start command buffer"
         );
 
-        auto outBuffer = device->createStorageBuffer<float>(RNG_NUM_COUNT, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
-        auto hostOutBuffer = device->createHostBuffer<float>(RNG_NUM_COUNT, VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+        auto outBuffer = device->createStorageBuffer<double>(RNG_NUM_COUNT, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+        auto hostOutBuffer = device->createHostBuffer<double>(RNG_NUM_COUNT, VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 
         PushConstants pushConstants = {
             .baseSeed = 0,
@@ -97,7 +98,7 @@ int main() {
         copyRegion.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
         copyRegion.srcOffset = 0;
         copyRegion.dstOffset = 0;
-        copyRegion.size = RNG_NUM_COUNT * sizeof(float);
+        copyRegion.size = RNG_NUM_COUNT * sizeof(double);
 
         VkCopyBufferInfo2 copyInfo = {};
         copyInfo.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
@@ -154,8 +155,8 @@ int main() {
 
         auto mapped = hostOutBuffer->map();
 
-        std::vector<float> results(RNG_NUM_COUNT);
-        std::memcpy(results.data(), mapped.get(), RNG_NUM_COUNT * sizeof(float));
+        std::vector<double> results(RNG_NUM_COUNT);
+        std::memcpy(results.data(), mapped.get(), RNG_NUM_COUNT * sizeof(double));
 
         // for (float result : results) {
         //     std::cout << result << " ";
