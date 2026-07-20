@@ -10,7 +10,7 @@
 #include <vector>
 #include <memory>
 
-static const std::vector<float> firstData = {1, 2, 3};
+static const std::vector<float> firstData = {1, 2, 16};
 static const std::vector<float> secondData = {3, 2, 1};
 
 struct PushConstants {
@@ -174,7 +174,13 @@ int main() {
 
         vkDestroyFence(device->handle(), fence, nullptr);
         spdlog::debug("Destroyed fence");
-        
+
+        auto mapped = staging->map();
+
+        std::vector<float> results(3);
+        std::memcpy(results.data(), mapped.get(), 3 * sizeof(float));
+
+        spdlog::info("Results are {}, {}, {}", results[0], results[1], results[2]);
     } catch(const std::exception& e) {
         spdlog::error("exception: {}", e.what());
         return 1;
