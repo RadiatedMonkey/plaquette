@@ -1,6 +1,6 @@
 import xoshiro;
 
-static const uint WORKGROUP_SIZE = 32;
+static const uint WORKGROUP_SIZE = 256;
 
 struct PushConstants {
     uint64_t seed;

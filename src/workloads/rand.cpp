@@ -1,4 +1,5 @@
-#include <plaquette/workload/rand.hpp>
+#include <plaquette/workloads/rand.hpp>
+#include <plaquette/workloads/workload.hpp>
 #include <plaquette/device.hpp>
 #include <plaquette/pipeline.hpp>
 #include <plaquette/storage.hpp>
@@ -101,7 +102,7 @@ namespace Plaq::Workload {
         copyInfo.dstBuffer = hostBuffer->handle();
 
         vkCmdCopyBuffer2(cmds.handle(), &copyInfo);
-
+        
         cmds.end();
 
         VkCommandBufferSubmitInfo cmdInfo = {};

@@ -17,6 +17,7 @@ set(SOURCES
     src/fence.cpp
 
     src/workloads/rand.cpp
+    src/workloads/mean.cpp
 
     src/spirv_reflect.c
 )

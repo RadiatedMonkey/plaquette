@@ -1,6 +1,7 @@
 #include <plaquette/instance.hpp>
 #include <plaquette/device.hpp>
-#include <plaquette/workload/rand.hpp>
+#include <plaquette/workloads/mean.hpp>
+#include <plaquette/workloads/workload.hpp>
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -19,7 +20,7 @@ int main() {
             .device = device
         };
 
-        Plaq::Workload::randomWorkload(info, 42);
+        Plaq::Workload::computeUniformMean(info, 23497349734);
     } catch(const std::exception& e) {
         spdlog::error("exception: {}", e.what());
         return 1;
