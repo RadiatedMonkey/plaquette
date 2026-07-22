@@ -1,19 +1,20 @@
-implementing lqft;
+typedef double FScalar;
 
-struct Lattice<F: IFloat> {
+struct Lattice {
     uint4 dimensions;
     uint totalSites;
-    F spacing;
-    F *buffer;
+    FScalar spacing;
+    FScalar *buffer;
 };
 
-struct PushConstants<F: IFloat> {
+struct PushConstants {
     uint64_t baseSeed;
+    uint dispatched;
 
-    double *output;
+    FScalar *output;
 
-    Lattice<F> lattice;
+    Lattice lattice;
 };
 
 [vk::push_constant]
-PushConstants<float> params;
+PushConstants params;

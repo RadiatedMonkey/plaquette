@@ -1,7 +1,7 @@
 module lqft;
 
-__include rand;
-__include config;
+import config;
+import xoshiro;
 
 [shader("compute")]
 [numthreads(64, 1, 1)]

@@ -5,6 +5,7 @@
 #define VK_NO_PROTOTYPES
 #include <vulkan/vulkan.h>
 
+#include <plaquette/fence.hpp>
 #include <plaquette/command.hpp>
 
 namespace Plaq {
@@ -28,6 +29,8 @@ namespace Plaq {
 
         /// @brief The device queue.
         VkQueue queue();
+
+        Fence createFence();
 
         std::shared_ptr<Pipeline> createPipeline(const PipelineConfig& config);
 

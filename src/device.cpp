@@ -204,6 +204,10 @@ namespace Plaq {
         return std::shared_ptr<Pipeline>(new Pipeline(shared_from_this(), config));
     }
 
+    Fence Device::createFence() {
+        return Fence(shared_from_this());
+    }
+
     Commands Device::createCmdBuffer() {
         assert(mPool != VK_NULL_HANDLE);
 
@@ -217,8 +221,9 @@ namespace Plaq {
 
         VkCommandBuffer buffer = VK_NULL_HANDLE;
         LOG_VKRESULT(vkAllocateCommandBuffers(mDevice, &bufferCi, &buffer), "Failed to allocate command buffers");
-
-        return { std::move(device), buffer };
+        
+        Commands cmds = { std::move(device), buffer };
+        return cmds;
     }
 
     VkCommandPool Device::cmdPool() {

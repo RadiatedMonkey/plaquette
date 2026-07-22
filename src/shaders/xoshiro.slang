@@ -1,12 +1,10 @@
-implementing lqft;
-
 /// Implements xoshiro256+
-struct XoshiroRng {
-    uint64_t mState[4];
+public struct XoshiroRng {
+    private uint64_t mState[4];
 
     /// Initialises the random number generator state using the given seed for the given thread ID.
     /// The thread ID ensures that each thread gets a different seed.
-    __init(uint3 dispatchThreadID, uint64_t baseSeed) {
+    public __init(uint3 dispatchThreadID, uint64_t baseSeed) {
         uint64_t threadID = dispatchThreadID.x;
         uint64_t state = threadID ^ baseSeed;
 
@@ -18,7 +16,7 @@ struct XoshiroRng {
 
     /// Returns the next state of the random number generator.
     [mutating]
-    uint64_t nextState() {
+    private uint64_t nextState() {
         uint64_t result = mState[0] + mState[3];
         uint64_t t = mState[1] << 17;
 
@@ -36,7 +34,7 @@ struct XoshiroRng {
     /// Returns the next double. This is done by calling `nextState` and then converting
     /// it to a double using the topmost 53 bits of the state.
     [mutating]
-    double nextDouble() {
+    public double nextDouble() {
         uint64_t state = nextState();
 
         // Take upper 53 bits and divide into range [0, 1).
@@ -46,7 +44,7 @@ struct XoshiroRng {
     /// Returns the next float. This is done by calling `nextState` and then converting
     /// it into a float using the topmost 24 bits of the state.
     [mutating]
-    float nextFloat() {
+    public float nextFloat() {
         uint64_t state = nextState();
 
         // Then extract the top 24 bits and divide by 2^24 to map it to [0,1).

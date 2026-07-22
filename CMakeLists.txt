@@ -14,7 +14,10 @@ set(SOURCES
     src/reflection.cpp
     src/command.cpp
     src/simulation.cpp
-    
+    src/fence.cpp
+
+    src/workloads/rand.cpp
+
     src/spirv_reflect.c
 )
 

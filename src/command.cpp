@@ -28,6 +28,17 @@ namespace Plaq {
         }
     }
 
+    void Commands::begin() {
+        VkCommandBufferBeginInfo beginInfo = {};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+        LOG_VKRESULT(vkBeginCommandBuffer(mBuffer, &beginInfo), "Failed to start command buffer");        
+    }
+
+    void Commands::end() {
+        LOG_VKRESULT(vkEndCommandBuffer(mBuffer), "Failed to end command buffer");
+    }
+
     void Commands::reset() {
         assert(mBuffer != VK_NULL_HANDLE);
 

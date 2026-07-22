@@ -14,6 +14,8 @@ namespace Plaq {
         Commands(const Commands&) = delete;
         ~Commands();
 
+        void begin();
+        void end();
         void reset();
         VkCommandBuffer handle();
 
