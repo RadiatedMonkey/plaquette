@@ -25,7 +25,6 @@ void main(uint3 dispatchID: SV_DispatchThreadID) {
             break;
         }
 
-        params.outBuffer[i] = i;
-        printf("thread %i wrote to location %i\n", dispatchID.x, i);
+        params.outBuffer[i] = rng.nextDouble();
     }
 }
