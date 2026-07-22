@@ -27,7 +27,7 @@ struct MeanConstants {
 namespace Plaq::Workload {
     static constexpr const char* RAND_SHADER_PATH = BUILD_DIR "/shaders/rand.spv";
     static constexpr const char* MEAN_SHADER_PATH = BUILD_DIR "/shaders/mean.spv";
-    static constexpr uint32_t NUM_COUNT = 512;
+    static constexpr uint32_t NUM_COUNT = 4096;
     static constexpr uint32_t WORKGROUP_SIZE = 256;
     static constexpr uint32_t DISPATCH_COUNT = (NUM_COUNT + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE;
 
@@ -153,7 +153,7 @@ namespace Plaq::Workload {
 
         vkCmdPipelineBarrier2(cmds.handle(), &depInfo);
 
-        copyRegion.size = DISPATCH_COUNT;
+        copyRegion.size = DISPATCH_COUNT * sizeof(double);
         
         copyInfo.srcBuffer = scratchBuffer->handle();
         copyInfo.dstBuffer = hostMeanBuffer->handle();
@@ -187,6 +187,12 @@ namespace Plaq::Workload {
         auto mappedMean = hostMeanBuffer->map();
         std::array<double, DISPATCH_COUNT> meanData = {};
         std::memcpy(meanData.data(), mappedMean.get(), DISPATCH_COUNT * sizeof(double));
+
+        double summedMeans = 0.0;
+        for (double mean : meanData) {
+            summedMeans += mean;
+        }
+        spdlog::info("Total mean is: {}", summedMeans / meanData.size());
 
         for (double mean : meanData) {
             spdlog::info("mean for block is {}", mean);

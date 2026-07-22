@@ -20,7 +20,7 @@ int main() {
             .device = device
         };
 
-        Plaq::Workload::computeUniformMean(info, 23497349734);
+        Plaq::Workload::computeUniformMean(info, 0);
     } catch(const std::exception& e) {
         spdlog::error("exception: {}", e.what());
         return 1;
