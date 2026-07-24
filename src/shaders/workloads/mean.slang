@@ -78,7 +78,7 @@ void computeWorkgroupMeans(
             // Divide by `WORKGROUP_SIZE` to compute the average of this workgroup
             buffer[dispatchThreadID.x / WORKGROUP_SIZE] = reduction / WORKGROUP_SIZE;
 
-            printf("wrote %f\n", reduction / WORKGROUP_SIZE);
+            printf("wrote %lf\n", reduction / WORKGROUP_SIZE);
         }
     }
 }

@@ -39,7 +39,7 @@ namespace Plaq {
         /// @brief Returns the name of the entry point.
         std::string entryPoint() const;
 
-        std::vector<VkPushConstantRange> pushConstantDescriptor() const;
+        std::vector<VkPushConstantRange> pushConstants() const;
 
     private:
         friend Device;
@@ -48,8 +48,9 @@ namespace Plaq {
 
         std::shared_ptr<Device> mDevice;
 
-        Slang::ComPtr<slang::IComponentType> mLinkedProgram = nullptr;
+        Slang::ComPtr<slang::IComponentType> mComposedProgram = nullptr;
         Slang::ComPtr<slang::IEntryPoint> mEntryPoint = nullptr;
+        slang::ProgramLayout* mLayout = nullptr;
         slang::IModule* mSlangModule = nullptr;
         VkShaderModule mModule = VK_NULL_HANDLE;
     };

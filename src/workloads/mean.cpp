@@ -65,6 +65,8 @@ namespace Plaq::Workload {
 
         auto meanPipeline = info.device->createPipeline(pipelineConfig);
 
+        return;
+
         auto scratchBuffer = info.device->createStorageBuffer<double>(NUM_COUNT, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
         auto hostRngBuffer = info.device->createHostBuffer<double>(NUM_COUNT, VK_BUFFER_USAGE_TRANSFER_DST_BIT);
         auto hostMeanBuffer = info.device->createHostBuffer<double>(DISPATCH_COUNT, VK_BUFFER_USAGE_TRANSFER_DST_BIT);

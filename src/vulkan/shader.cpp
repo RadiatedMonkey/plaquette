@@ -47,11 +47,9 @@ namespace Plaq {
         };
 
         diagnosticBlob = nullptr;
-        Slang::ComPtr<slang::IComponentType> composedProgram = nullptr;
-
         result = session->createCompositeComponentType(
             componentTypes.data(), componentTypes.size(),
-            composedProgram.writeRef(), diagnosticBlob.writeRef()
+            mComposedProgram.writeRef(), diagnosticBlob.writeRef()
         );
 
         if (diagnosticBlob != nullptr) {
@@ -67,7 +65,7 @@ namespace Plaq {
         diagnosticBlob = nullptr;
         Slang::ComPtr<slang::IBlob> spirvCode = nullptr;
 
-        result = composedProgram->getEntryPointCode(
+        result = mComposedProgram->getEntryPointCode(
             0, 0, spirvCode.writeRef(), diagnosticBlob.writeRef()
         );
 
@@ -83,6 +81,19 @@ namespace Plaq {
 
         spdlog::trace("Loaded SPIR-V entrypoint");
 
+        mLayout = mComposedProgram->getLayout(0, diagnosticBlob.writeRef());
+
+        if (diagnosticBlob != nullptr) {
+            spdlog::warn("Info while loading program layout: {}", reinterpret_cast<const char*>(diagnosticBlob->getBufferPointer()));
+        }
+
+        if (!mLayout) {
+            spdlog::error("Failed to get program layout");
+            throw std::runtime_error("Failed to get program layout");
+        }
+
+        spdlog::trace("Loaded program layout");
+
         VkShaderModuleCreateInfo moduleCi = {};
         moduleCi.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         moduleCi.codeSize = spirvCode->getBufferSize();
@@ -92,16 +103,17 @@ namespace Plaq {
             vkCreateShaderModule(mDevice->handle(), &moduleCi, nullptr, &mModule),
             "Failed to create Vulkan shader module"
         );
-
-        mLinkedProgram = composedProgram;
     }
 
     Shader::Shader(Shader&& other) noexcept :
         mDevice(std::move(other.mDevice)),
         mSlangModule(std::move(other.mSlangModule)),
-        mLinkedProgram(std::move(other.mLinkedProgram)),
+        mComposedProgram(std::move(other.mComposedProgram)),
         mEntryPoint(std::move(other.mEntryPoint))
     {
+        mLayout = other.mLayout;
+        other.mLayout = nullptr;
+
         mModule = other.mModule;
         other.mModule = VK_NULL_HANDLE;
     }
@@ -126,8 +138,30 @@ namespace Plaq {
         return std::string(entryPointName);
     }
 
-    std::vector<VkPushConstantRange> Shader::pushConstantDescriptor() const {
-        // TODO
-        return {};
+    std::vector<VkPushConstantRange> Shader::pushConstants() const {
+        uint32_t paramCount = mLayout->getParameterCount();
+
+        std::vector<VkPushConstantRange> pushConstants = {};
+        for (uint32_t i = 0; i < paramCount; i++) {
+            slang::VariableLayoutReflection* varLayout = mLayout->getParameterByIndex(i);
+            slang::TypeLayoutReflection* typeLayout = varLayout->getTypeLayout();
+
+            slang::ParameterCategory category = varLayout->getCategory();
+            if (category == slang::ParameterCategory::PushConstantBuffer) {
+                size_t offset = varLayout->getOffset(slang::ParameterCategory::PushConstantBuffer);
+
+                slang::TypeLayoutReflection* elementLayout = typeLayout->getElementTypeLayout();
+                size_t size = elementLayout->getSize(slang::ParameterCategory::Uniform);
+
+                VkPushConstantRange constant = {};
+                constant.offset = offset;
+                constant.size = size;
+                constant.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+                pushConstants.push_back(constant);
+            }
+        }
+
+        return pushConstants;
     }
 }

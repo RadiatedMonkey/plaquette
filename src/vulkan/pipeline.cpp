@@ -93,23 +93,14 @@ namespace Plaq {
         spdlog::debug("Allocated bindless descriptor set");
 
         Shader shader = mDevice->createShader(config.shaderConfig);
+        std::vector<VkPushConstantRange> pushConstants = shader.pushConstants();
 
-        // std::vector<VkPushConstantRange> pushConstants(module.push_constant_block_count);
-        // for (uint32_t i = 0; i < module.push_constant_block_count; i++) {
-        //     VkPushConstantRange pushConstant = {};
-        //     pushConstant.offset = module.push_constant_blocks[i].offset;
-        //     pushConstant.size = module.push_constant_blocks[i].size;
-        //     pushConstant.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-        //     pushConstants[i] = pushConstant;
-        // }
-
-        // spdlog::info("Registered {} push constant block(s)", pushConstants.size());
+        spdlog::info("Registered {} push constant block(s)", pushConstants.size());
 
         VkPipelineLayoutCreateInfo layoutCi = {};
         layoutCi.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        // layoutCi.pushConstantRangeCount = pushConstants.size();
-        // layoutCi.pPushConstantRanges = pushConstants.data();
+        layoutCi.pushConstantRangeCount = pushConstants.size();
+        layoutCi.pPushConstantRanges = pushConstants.data();
         layoutCi.setLayoutCount = 1;
         layoutCi.pSetLayouts = &mBindlessLayout;
 
