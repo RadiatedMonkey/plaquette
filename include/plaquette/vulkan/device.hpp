@@ -1,14 +1,29 @@
 #pragma once
 
+#include <array>
 #include <memory>
 
 #define VK_NO_PROTOTYPES
 #include <vulkan/vulkan.h>
 
+#include <slang/slang-com-ptr.h>
+#include <slang/slang.h>
+
 #include <plaquette/vulkan/fence.hpp>
 #include <plaquette/vulkan/command.hpp>
 
 namespace Plaq {
+    static constexpr std::array<const char*, 1> kShaderIncludePaths = {
+        "src/shaders"
+    };
+
+    static constexpr std::array<const char*, 4> kDeviceExtensions = {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
+        VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
+        VK_KHR_MAP_MEMORY_2_EXTENSION_NAME
+    };
+
     class Instance;
     class Pipeline;
     struct PipelineConfig;
@@ -66,6 +81,7 @@ namespace Plaq {
         /// @brief The memory properties of this device.
         VkPhysicalDeviceMemoryProperties2 memProperties();
 
+        Slang::ComPtr<slang::ISession>& localSlangSession();
     private:
         friend Instance;
 
@@ -74,6 +90,9 @@ namespace Plaq {
         void destroyResources();
 
         std::shared_ptr<Instance> mInstance = nullptr;
+
+        Slang::ComPtr<slang::ISession> mLocalSession;
+        Slang::ComPtr<slang::IGlobalSession> mGlobalSession;
 
         VkPhysicalDeviceMemoryProperties2 mMemProperties = {};
         VkPhysicalDeviceFeatures2 mFeatures = {};

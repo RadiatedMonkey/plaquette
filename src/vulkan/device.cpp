@@ -9,13 +9,6 @@
 #include <vector>
 
 namespace Plaq {
-    static constexpr const char* ENABLED_DEVICE_EXTENSIONS[] = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
-        VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
-        VK_KHR_MAP_MEMORY_2_EXTENSION_NAME
-    };
-
     Device::Device(std::shared_ptr<Instance> instance) : mInstance(std::move(instance)) {
         uint32_t count = 0;
         LOG_VKRESULT(
@@ -125,8 +118,8 @@ namespace Plaq {
         deviceCi.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
         deviceCi.queueCreateInfoCount = 1;
         deviceCi.pQueueCreateInfos = &queueCi;
-        deviceCi.enabledExtensionCount = std::size(ENABLED_DEVICE_EXTENSIONS);
-        deviceCi.ppEnabledExtensionNames = ENABLED_DEVICE_EXTENSIONS;
+        deviceCi.enabledExtensionCount = kDeviceExtensions.size();
+        deviceCi.ppEnabledExtensionNames = kDeviceExtensions.data();
         deviceCi.enabledLayerCount = 0; // Device layers are deprecated
         deviceCi.pNext = &enabledFeatures;
 
@@ -163,6 +156,37 @@ namespace Plaq {
                 destroyResources();
             }
         );
+
+        SlangGlobalSessionDesc globalDesc = {};
+        CHECK_SRESULT(
+            slang::createGlobalSession(&globalDesc, mGlobalSession.writeRef()),
+            "Failed to create Slang global session",
+            {
+                destroyResources();
+            }
+        );
+
+        spdlog::trace("Created global Slang session");
+
+        slang::TargetDesc shaderTarget = {};
+        shaderTarget.format = SLANG_SPIRV;
+        shaderTarget.profile = mGlobalSession->findProfile("glsl_450");
+
+        slang::SessionDesc sessionDesc = {};
+        sessionDesc.searchPathCount = kShaderIncludePaths.size();
+        sessionDesc.searchPaths = kShaderIncludePaths.data();
+        sessionDesc.targetCount = 1;
+        sessionDesc.targets = &shaderTarget;
+
+        CHECK_SRESULT(
+            mGlobalSession->createSession(sessionDesc, mLocalSession.writeRef()),
+            "Failed to create Slang local session",
+            {
+                destroyResources();
+            }
+        );
+
+        spdlog::trace("Created local Slang session");
     }
 
     Device::Device(Device&& other) noexcept
@@ -240,5 +264,9 @@ namespace Plaq {
 
     VkPhysicalDeviceMemoryProperties2 Device::memProperties() {
         return mMemProperties;
+    }
+
+    Slang::ComPtr<slang::ISession>& Device::localSlangSession() {
+        return mLocalSession;
     }
 }

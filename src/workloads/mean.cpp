@@ -25,8 +25,8 @@ struct MeanConstants {
 };
 
 namespace Plaq::Workload {
-    static constexpr const char* RAND_SHADER_PATH = BUILD_DIR "/shaders/rand.spv";
-    static constexpr const char* MEAN_SHADER_PATH = BUILD_DIR "/shaders/mean.spv";
+    static constexpr const char* RAND_SHADER_PATH = "/shaders/rand.spv";
+    static constexpr const char* MEAN_SHADER_PATH = "/shaders/mean.spv";
     static constexpr uint32_t NUM_COUNT = 4096;
     static constexpr uint32_t WORKGROUP_SIZE = 256;
     static constexpr uint32_t DISPATCH_COUNT = (NUM_COUNT + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE;

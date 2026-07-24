@@ -19,7 +19,7 @@ struct PushConstants {
 };
 
 namespace Plaq::Workload {
-    static constexpr const char* RAND_SHADER_PATH = BUILD_DIR "/shaders/rand.spv";
+    static constexpr const char* RAND_SHADER_PATH = "/shaders/rand.spv";
     static constexpr uint32_t NUM_COUNT = 4096;
     static constexpr uint32_t WORKGROUP_SIZE = 32;
 

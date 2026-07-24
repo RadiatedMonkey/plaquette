@@ -4,10 +4,13 @@ project(rt)
 include(cmake/CPM.cmake)
 
 set(FETCHCONTENT_QUIET  FALSE CACHE BOOL "" FORCE)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "" FORCE)
 
 set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_WIN32_KHR)
+
+if(WIN32)
+  set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_WIN32_KHR)
+endif()
 
 set(SLANG_ENABLE_SLANGC         OFF CACHE BOOL "" FORCE)
 set(SLANG_ENABLE_SLANGD         OFF CACHE BOOL "" FORCE)
@@ -45,9 +48,12 @@ set(SOURCES
     src/workloads/mean.cpp
 )
 
-message(${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-
 add_executable(rt ${SOURCES})
 target_include_directories(rt PRIVATE include)
-target_compile_definitions(rt PRIVATE BUILD_DIR="${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 target_link_libraries(rt PRIVATE volk glfw spdlog slang)
+
+file(COPY_FILE
+  "${CMAKE_BINARY_DIR}/compile_commands.json"
+  "${CMAKE_SOURCE_DIR}/compile_commands.json"
+  ONLY_IF_DIFFERENT
+)
