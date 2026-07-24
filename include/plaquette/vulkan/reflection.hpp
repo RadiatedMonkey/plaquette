@@ -3,7 +3,7 @@
 #define VK_NO_PROTOTYPES
 #include <vulkan/vulkan.h>
 
-#include <plaquette/spirv_reflect.h>
+#include <plaquette/vulkan/spirv_reflect.h>
 
 #include <memory>
 
@@ -26,13 +26,13 @@ namespace Plaq {
         ReflectLayout(SpvReflectShaderModule module);
         ~ReflectLayout();
 
-        template<typename R, typename... Args> 
+        template<typename R, typename... Args>
         requires ConstructableResource<R, std::shared_ptr<Device>, Args...>
         void bind(Args&&... args) {
 
         }
 
     private:
-    
+
     };
 }

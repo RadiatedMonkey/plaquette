@@ -1,5 +1,5 @@
-#include <plaquette/fence.hpp>
-#include <plaquette/device.hpp>
+#include <plaquette/vulkan/fence.hpp>
+#include <plaquette/vulkan/device.hpp>
 #include <plaquette/util.hpp>
 
 #include <volk.h>
@@ -9,7 +9,7 @@ namespace Plaq {
     Fence::Fence(std::shared_ptr<Device> device) : mDevice(std::move(device)) {
         VkFenceCreateInfo fenceCi = {};
         fenceCi.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-        
+
         LOG_VKRESULT(
             vkCreateFence(mDevice->handle(), &fenceCi, nullptr, &mFence),
             "Failed to create fence"

@@ -1,5 +1,5 @@
-#include <plaquette/storage.hpp>
-#include <plaquette/device.hpp>
+#include <plaquette/vulkan/storage.hpp>
+#include <plaquette/vulkan/device.hpp>
 
 #include <spdlog/spdlog.h>
 #include <volk.h>
@@ -19,7 +19,7 @@ namespace Plaq {
     }
 
     StorageBuffer::StorageBuffer(std::shared_ptr<Device> device, VkDeviceSize size, VkBufferUsageFlags usageFlags)
-        : mDevice(std::move(device)), mSize(size) 
+        : mDevice(std::move(device)), mSize(size)
     {
         VkBufferCreateInfo bufferCi = {};
         bufferCi.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -85,7 +85,7 @@ namespace Plaq {
 
         spdlog::debug("Bound memory and buffer together");
     }
-    
+
     StorageBuffer::~StorageBuffer() {
         freeMemory();
         destroyBuffer();

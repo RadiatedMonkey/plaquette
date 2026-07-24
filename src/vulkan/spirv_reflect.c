@@ -14,7 +14,7 @@
  limitations under the License.
 */
 
-#include "plaquette/spirv_reflect.h"
+#include "plaquette/vulkan/spirv_reflect.h"
 
 #include <assert.h>
 #include <stdbool.h>

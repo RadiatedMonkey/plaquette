@@ -1,5 +1,5 @@
-#include <plaquette/reflection.hpp>
-#include <plaquette/device.hpp>
+#include <plaquette/vulkan/reflection.hpp>
+#include <plaquette/vulkan/device.hpp>
 
 #include <spdlog/spdlog.h>
 #include <volk.h>
@@ -10,6 +10,6 @@ namespace Plaq {
     }
 
     ReflectLayout::~ReflectLayout() {
-        
+
     }
 }

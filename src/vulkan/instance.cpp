@@ -1,5 +1,5 @@
-#include <plaquette/instance.hpp>
-#include <plaquette/device.hpp>
+#include <plaquette/vulkan/instance.hpp>
+#include <plaquette/vulkan/device.hpp>
 #include <plaquette/util.hpp>
 
 #include <iostream>

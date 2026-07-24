@@ -1,10 +1,10 @@
 #pragma once
 
 #include <plaquette/util.hpp>
-#include <plaquette/instance.hpp>
-#include <plaquette/device.hpp>
-#include <plaquette/pipeline.hpp>
-#include <plaquette/storage.hpp>
+#include <plaquette/vulkan/instance.hpp>
+#include <plaquette/vulkan/device.hpp>
+#include <plaquette/vulkan/pipeline.hpp>
+#include <plaquette/vulkan/storage.hpp>
 
 #include <volk.h>
 
@@ -16,7 +16,7 @@ namespace Plaq {
         /// @brief The device-local buffer the lattice is stored in.
         ///
         /// The shader is given access to this buffer through a device address passed by push constant.
-        std::shared_ptr<StorageBuffer> buffer; 
+        std::shared_ptr<StorageBuffer> buffer;
     };
 
     template<RealFloat F>

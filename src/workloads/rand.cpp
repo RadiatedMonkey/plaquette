@@ -1,9 +1,9 @@
 #include <plaquette/workloads/rand.hpp>
 #include <plaquette/workloads/workload.hpp>
-#include <plaquette/device.hpp>
-#include <plaquette/pipeline.hpp>
-#include <plaquette/storage.hpp>
-#include <plaquette/fence.hpp>
+#include <plaquette/vulkan/device.hpp>
+#include <plaquette/vulkan/pipeline.hpp>
+#include <plaquette/vulkan/storage.hpp>
+#include <plaquette/vulkan/fence.hpp>
 #include <plaquette/util.hpp>
 
 #include <array>
@@ -102,7 +102,7 @@ namespace Plaq::Workload {
         copyInfo.dstBuffer = hostBuffer->handle();
 
         vkCmdCopyBuffer2(cmds.handle(), &copyInfo);
-        
+
         cmds.end();
 
         VkCommandBufferSubmitInfo cmdInfo = {};

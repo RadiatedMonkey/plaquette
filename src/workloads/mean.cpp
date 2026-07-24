@@ -1,9 +1,9 @@
 #include <plaquette/workloads/mean.hpp>
 #include <plaquette/workloads/workload.hpp>
-#include <plaquette/device.hpp>
-#include <plaquette/pipeline.hpp>
-#include <plaquette/storage.hpp>
-#include <plaquette/fence.hpp>
+#include <plaquette/vulkan/device.hpp>
+#include <plaquette/vulkan/pipeline.hpp>
+#include <plaquette/vulkan/storage.hpp>
+#include <plaquette/vulkan/fence.hpp>
 #include <plaquette/util.hpp>
 
 #include <array>
@@ -60,7 +60,7 @@ namespace Plaq::Workload {
 
         auto cmds = info.device->createCmdBuffer();
         auto fence = info.device->createFence();
-    
+
         auto randPipeline = info.device->createPipeline(pipelineConfig);
 
         pipelineConfig.shaderPath = MEAN_SHADER_PATH;
@@ -71,7 +71,7 @@ namespace Plaq::Workload {
         auto hostMeanBuffer = info.device->createHostBuffer<double>(DISPATCH_COUNT, VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 
         cmds.begin();
-        
+
         RandConstants randConstants = {
             .seed = seed,
             .numCount = NUM_COUNT,
@@ -127,7 +127,7 @@ namespace Plaq::Workload {
 
         vkCmdCopyBuffer2(cmds.handle(), &copyInfo);
 
-        MeanConstants meanConstants = { 
+        MeanConstants meanConstants = {
             .randBuffer = scratchBuffer->address(),
             .bufferSize = NUM_COUNT,
             .dispatched = DISPATCH_COUNT * WORKGROUP_SIZE
@@ -154,7 +154,7 @@ namespace Plaq::Workload {
         vkCmdPipelineBarrier2(cmds.handle(), &depInfo);
 
         copyRegion.size = DISPATCH_COUNT * sizeof(double);
-        
+
         copyInfo.srcBuffer = scratchBuffer->handle();
         copyInfo.dstBuffer = hostMeanBuffer->handle();
         copyInfo.regionCount = 1;

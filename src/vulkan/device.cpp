@@ -1,6 +1,6 @@
-#include <plaquette/pipeline.hpp>
-#include <plaquette/device.hpp>
-#include <plaquette/instance.hpp>
+#include <plaquette/vulkan/pipeline.hpp>
+#include <plaquette/vulkan/device.hpp>
+#include <plaquette/vulkan/instance.hpp>
 #include <plaquette/util.hpp>
 
 #include <volk.h>
@@ -86,7 +86,7 @@ namespace Plaq {
         VkPhysicalDeviceSynchronization2Features sync2Features = {};
         sync2Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES;
         sync2Features.pNext = &descriptorFeatures;
-        
+
         VkPhysicalDeviceBufferDeviceAddressFeatures addressFeatures = {};
         addressFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
         addressFeatures.pNext = &sync2Features;
@@ -165,7 +165,7 @@ namespace Plaq {
         );
     }
 
-    Device::Device(Device&& other) noexcept 
+    Device::Device(Device&& other) noexcept
         : mInstance(std::move(other.mInstance)), mDevice(other.mDevice),
             mPool(other.mPool), mQueue(other.mQueue), mQueueFamilyIndex(other.mQueueFamilyIndex),
             mMemProperties(other.mMemProperties), mFeatures(other.mFeatures), mProperties(other.mProperties)
@@ -174,7 +174,7 @@ namespace Plaq {
         other.mPool = VK_NULL_HANDLE;
         other.mQueue = VK_NULL_HANDLE;
         other.mQueueFamilyIndex = UINT32_MAX;
-    }   
+    }
 
     Device::~Device() {
         destroyResources();
@@ -221,7 +221,7 @@ namespace Plaq {
 
         VkCommandBuffer buffer = VK_NULL_HANDLE;
         LOG_VKRESULT(vkAllocateCommandBuffers(mDevice, &bufferCi, &buffer), "Failed to allocate command buffers");
-        
+
         Commands cmds = { std::move(device), buffer };
         return cmds;
     }
@@ -241,4 +241,4 @@ namespace Plaq {
     VkPhysicalDeviceMemoryProperties2 Device::memProperties() {
         return mMemProperties;
     }
-}   
+}

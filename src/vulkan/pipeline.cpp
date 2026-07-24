@@ -1,6 +1,6 @@
-#include <plaquette/pipeline.hpp>
-#include <plaquette/device.hpp>
-#include <plaquette/spirv_reflect.h>
+#include <plaquette/vulkan/pipeline.hpp>
+#include <plaquette/vulkan/device.hpp>
+#include <plaquette/vulkan/spirv_reflect.h>
 #include <plaquette/util.hpp>
 
 #include <spdlog/spdlog.h>
@@ -26,7 +26,7 @@ namespace Plaq {
 
         std::vector<uint32_t> code(filesize / sizeof(uint32_t));
         file.read(reinterpret_cast<char*>(code.data()), filesize);
-        
+
         SpvReflectResult spResult = spvReflectCreateShaderModule(filesize, code.data(), &mReflectModule);
         if (spResult != SPV_REFLECT_RESULT_SUCCESS) {
             spdlog::error("Failed to load shader module using SPIRV-Reflect: {}", static_cast<uint32_t>(spResult));
@@ -45,12 +45,12 @@ namespace Plaq {
                 destroyReflectModule();
             }
         );
-        
+
         spdlog::debug("Created shader module");
     }
 
-    ReflectableShader::ReflectableShader(ReflectableShader&& other) noexcept : 
-        mDevice(std::move(other.mDevice)), mReflectModule(other.mReflectModule), mModule(other.mModule)  
+    ReflectableShader::ReflectableShader(ReflectableShader&& other) noexcept :
+        mDevice(std::move(other.mDevice)), mReflectModule(other.mReflectModule), mModule(other.mModule)
     {
         other.mModule = VK_NULL_HANDLE;
     }
@@ -62,7 +62,7 @@ namespace Plaq {
 
             // In here since we cannot easily set `mReflectModule` to some kind of null pointer.
             destroyReflectModule();
-        }        
+        }
     }
 
     void ReflectableShader::destroyReflectModule() {
@@ -208,7 +208,7 @@ namespace Plaq {
 
     Pipeline::Pipeline(Pipeline&& other) noexcept :
         mDevice(std::move(other.mDevice)), mPipeline(other.mPipeline), mLayout(other.mLayout),
-        mReflectLayout(std::move(other.mReflectLayout)), 
+        mReflectLayout(std::move(other.mReflectLayout)),
         mDescriptorPool(other.mDescriptorPool), mBindlessLayout(other.mBindlessLayout), mBindlessSet(other.mBindlessSet)
      {
         other.mPipeline = VK_NULL_HANDLE;
