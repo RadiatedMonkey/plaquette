@@ -16,7 +16,7 @@ namespace Plaq {
 
         VkFence handle();
 
-        void await(uint64_t timeout = UINT64_MAX);
+        void await(uint64_t timeout = UINT64_MAX) const;
         void reset();
 
     private:

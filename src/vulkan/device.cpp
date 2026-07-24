@@ -1,3 +1,4 @@
+#include <plaquette/vulkan/shader.hpp>
 #include <plaquette/vulkan/pipeline.hpp>
 #include <plaquette/vulkan/device.hpp>
 #include <plaquette/vulkan/instance.hpp>
@@ -157,6 +158,8 @@ namespace Plaq {
             }
         );
 
+        spdlog::trace("Created command pool");
+
         SlangGlobalSessionDesc globalDesc = {};
         CHECK_SRESULT(
             slang::createGlobalSession(&globalDesc, mGlobalSession.writeRef()),
@@ -224,8 +227,12 @@ namespace Plaq {
         return mQueue;
     }
 
-    std::shared_ptr<Pipeline> Device::createPipeline(const PipelineConfig& config) {
-        return std::shared_ptr<Pipeline>(new Pipeline(shared_from_this(), config));
+    Shader Device::createShader(const ShaderConfig& config) {
+        return Shader(shared_from_this(), config);
+    }
+
+    std::shared_ptr<ComputePipeline> Device::createPipeline(const PipelineConfig& config) {
+        return std::shared_ptr<ComputePipeline>(new ComputePipeline(shared_from_this(), config));
     }
 
     Fence Device::createFence() {

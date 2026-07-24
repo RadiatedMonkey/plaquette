@@ -25,8 +25,10 @@ namespace Plaq {
     };
 
     class Instance;
-    class Pipeline;
+    class ComputePipeline;
+    class Shader;
     struct PipelineConfig;
+    struct ShaderConfig;
 
     class StorageBuffer;
     template<typename T> class HostBuffer;
@@ -47,7 +49,9 @@ namespace Plaq {
 
         Fence createFence();
 
-        std::shared_ptr<Pipeline> createPipeline(const PipelineConfig& config);
+        Shader createShader(const ShaderConfig& config);
+
+        std::shared_ptr<ComputePipeline> createPipeline(const PipelineConfig& config);
 
         /// @brief Creates a host-visible, host-coherent buffer.
         /// @param size The size in elements of the buffer to create.

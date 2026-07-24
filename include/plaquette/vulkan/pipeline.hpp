@@ -6,66 +6,34 @@
 #define VK_NO_PROTOTYPES
 #include <vulkan/vulkan.h>
 
-#include <plaquette/vulkan/reflection.hpp>
-#include <plaquette/vulkan/spirv_reflect.h>
+#include <plaquette/vulkan/shader.hpp>
 
 namespace Plaq {
     class Device;
-
-    class ReflectableShader {
-    public:
-        ReflectableShader(std::shared_ptr<Device> device, const std::string& filepath);
-        ReflectableShader(ReflectableShader&& other) noexcept;
-        ReflectableShader(const ReflectableShader&) = delete;
-        ~ReflectableShader();
-
-        VkShaderModule handle() {
-            return mModule;
-        }
-
-        SpvReflectShaderModule reflectHandle() {
-            return mReflectModule;
-        }
-
-    private:
-        void destroyReflectModule();
-
-        std::shared_ptr<Device> mDevice = nullptr;
-        SpvReflectShaderModule mReflectModule;
-        VkShaderModule mModule = VK_NULL_HANDLE;
-    };
+    class Shader;
 
     struct PipelineConfig {
-        std::string shaderPath;
+        ShaderConfig shaderConfig;
     };
 
-    class Pipeline {
+    class ComputePipeline {
     public:
-        Pipeline(Pipeline&& other) noexcept;
-        Pipeline(const Pipeline&) = delete;
-        ~Pipeline();
+        ComputePipeline(ComputePipeline&& other) noexcept;
+        ComputePipeline(const ComputePipeline&) = delete;
+        ~ComputePipeline();
 
         VkPipeline handle();
         VkPipelineLayout layout();
 
-        ReflectLayout& resources() {
-            return mReflectLayout;
-        }
-
-        const ReflectLayout& resources() const {
-            return mReflectLayout;
-        }
-
     private:
         friend Device;
 
-        Pipeline(std::shared_ptr<Device> device, const PipelineConfig& config);
+        ComputePipeline(std::shared_ptr<Device> device, const PipelineConfig& config);
 
         void destroyResources();
 
         std::shared_ptr<Device> mDevice = nullptr;
-
-        ReflectLayout mReflectLayout;
+        std::shared_ptr<Shader> mShader = nullptr;
 
         VkDescriptorSetLayout mBindlessLayout = VK_NULL_HANDLE;
         VkDescriptorSet mBindlessSet = VK_NULL_HANDLE;

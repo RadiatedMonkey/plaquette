@@ -1,76 +1,18 @@
 #include <plaquette/vulkan/pipeline.hpp>
 #include <plaquette/vulkan/device.hpp>
 #include <plaquette/vulkan/spirv_reflect.h>
+#include <plaquette/vulkan/shader.hpp>
 #include <plaquette/util.hpp>
 
 #include <spdlog/spdlog.h>
 #include <volk.h>
 
 #include <array>
-#include <fstream>
 
 static constexpr uint32_t MAX_BINDLESS_RESOURCES = 100;
 
 namespace Plaq {
-    ReflectableShader::ReflectableShader(std::shared_ptr<Device> device, const std::string& filepath) : mDevice(std::move(device)) {
-        spdlog::debug("Opening shader module {}", filepath);
-
-        std::ifstream file(filepath, std::ios::binary | std::ios::ate);
-        if (!file.is_open()) {
-            spdlog::error("Failed to open shader module file `{}`", filepath);
-            throw std::runtime_error("Failed to open shader file");
-        }
-
-        size_t filesize = file.tellg();
-        file.seekg(0);
-
-        std::vector<uint32_t> code(filesize / sizeof(uint32_t));
-        file.read(reinterpret_cast<char*>(code.data()), filesize);
-
-        SpvReflectResult spResult = spvReflectCreateShaderModule(filesize, code.data(), &mReflectModule);
-        if (spResult != SPV_REFLECT_RESULT_SUCCESS) {
-            spdlog::error("Failed to load shader module using SPIRV-Reflect: {}", static_cast<uint32_t>(spResult));
-            throw std::runtime_error("Failed to load shader module using SPIRV-Reflect");
-        }
-
-        VkShaderModuleCreateInfo moduleCi = {};
-        moduleCi.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        moduleCi.codeSize = filesize;
-        moduleCi.pCode = code.data();
-
-        CHECK_VKRESULT(
-            vkCreateShaderModule(mDevice->handle(), &moduleCi, nullptr, &mModule),
-            "Failed to create shader module",
-            {
-                destroyReflectModule();
-            }
-        );
-
-        spdlog::debug("Created shader module");
-    }
-
-    ReflectableShader::ReflectableShader(ReflectableShader&& other) noexcept :
-        mDevice(std::move(other.mDevice)), mReflectModule(other.mReflectModule), mModule(other.mModule)
-    {
-        other.mModule = VK_NULL_HANDLE;
-    }
-
-    ReflectableShader::~ReflectableShader() {
-        if(mModule != VK_NULL_HANDLE) {
-            vkDestroyShaderModule(mDevice->handle(), mModule, nullptr);
-            spdlog::debug("Destroyed shader module");
-
-            // In here since we cannot easily set `mReflectModule` to some kind of null pointer.
-            destroyReflectModule();
-        }
-    }
-
-    void ReflectableShader::destroyReflectModule() {
-        spvReflectDestroyShaderModule(&mReflectModule);
-        spdlog::debug("Destroyed reflection shader module");
-    }
-
-    Pipeline::Pipeline(std::shared_ptr<Device> device, const PipelineConfig& config) : mDevice(std::move(device)) {
+    ComputePipeline::ComputePipeline(std::shared_ptr<Device> device, const PipelineConfig& config) : mDevice(std::move(device)) {
         static constexpr uint32_t DESCRIPTOR_TYPE_COUNT = 2;
 
         std::array<VkDescriptorSetLayoutBinding, DESCRIPTOR_TYPE_COUNT> bindings = {};
@@ -150,27 +92,24 @@ namespace Plaq {
 
         spdlog::debug("Allocated bindless descriptor set");
 
-        ReflectableShader shader(mDevice, config.shaderPath);
+        Shader shader = mDevice->createShader(config.shaderConfig);
 
-        SpvReflectShaderModule module = shader.reflectHandle();
-        mReflectLayout = ReflectLayout(module);
+        // std::vector<VkPushConstantRange> pushConstants(module.push_constant_block_count);
+        // for (uint32_t i = 0; i < module.push_constant_block_count; i++) {
+        //     VkPushConstantRange pushConstant = {};
+        //     pushConstant.offset = module.push_constant_blocks[i].offset;
+        //     pushConstant.size = module.push_constant_blocks[i].size;
+        //     pushConstant.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-        std::vector<VkPushConstantRange> pushConstants(module.push_constant_block_count);
-        for (uint32_t i = 0; i < module.push_constant_block_count; i++) {
-            VkPushConstantRange pushConstant = {};
-            pushConstant.offset = module.push_constant_blocks[i].offset;
-            pushConstant.size = module.push_constant_blocks[i].size;
-            pushConstant.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+        //     pushConstants[i] = pushConstant;
+        // }
 
-            pushConstants[i] = pushConstant;
-        }
-
-        spdlog::info("Registered {} push constant block(s)", pushConstants.size());
+        // spdlog::info("Registered {} push constant block(s)", pushConstants.size());
 
         VkPipelineLayoutCreateInfo layoutCi = {};
         layoutCi.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        layoutCi.pushConstantRangeCount = pushConstants.size();
-        layoutCi.pPushConstantRanges = pushConstants.data();
+        // layoutCi.pushConstantRangeCount = pushConstants.size();
+        // layoutCi.pPushConstantRanges = pushConstants.data();
         layoutCi.setLayoutCount = 1;
         layoutCi.pSetLayouts = &mBindlessLayout;
 
@@ -184,11 +123,14 @@ namespace Plaq {
 
         spdlog::debug("Created compute pipeline layout");
 
+        std::string entryPointName = shader.entryPoint();
+        spdlog::debug("Using shader entrypoint \"{}\"", entryPointName);
+
         VkPipelineShaderStageCreateInfo stageCi = {};
         stageCi.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         stageCi.module = shader.handle();
         stageCi.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-        stageCi.pName = shader.reflectHandle().entry_point_name;
+        stageCi.pName = entryPointName.c_str();
 
         VkComputePipelineCreateInfo pipelineCi = {};
         pipelineCi.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
@@ -206,9 +148,8 @@ namespace Plaq {
         spdlog::debug("Created compute pipeline");
     }
 
-    Pipeline::Pipeline(Pipeline&& other) noexcept :
+    ComputePipeline::ComputePipeline(ComputePipeline&& other) noexcept :
         mDevice(std::move(other.mDevice)), mPipeline(other.mPipeline), mLayout(other.mLayout),
-        mReflectLayout(std::move(other.mReflectLayout)),
         mDescriptorPool(other.mDescriptorPool), mBindlessLayout(other.mBindlessLayout), mBindlessSet(other.mBindlessSet)
      {
         other.mPipeline = VK_NULL_HANDLE;
@@ -218,19 +159,19 @@ namespace Plaq {
         other.mBindlessSet = VK_NULL_HANDLE;
     }
 
-    Pipeline::~Pipeline() {
+    ComputePipeline::~ComputePipeline() {
         destroyResources();
     }
 
-    VkPipelineLayout Pipeline::layout() {
+    VkPipelineLayout ComputePipeline::layout() {
         return mLayout;
     }
 
-    VkPipeline Pipeline::handle() {
+    VkPipeline ComputePipeline::handle() {
         return mPipeline;
     }
 
-    void Pipeline::destroyResources() {
+    void ComputePipeline::destroyResources() {
         if (mPipeline != VK_NULL_HANDLE) {
             vkDestroyPipeline(mDevice->handle(), mPipeline, nullptr);
             mPipeline = VK_NULL_HANDLE;

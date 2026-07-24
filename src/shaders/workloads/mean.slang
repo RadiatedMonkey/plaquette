@@ -19,7 +19,7 @@ groupshared FScalar sdata[WAVES_PER_WORKGROUP];
 ///
 /// This function writes the partial means into `params.buffer` with the workgroup index
 /// representing the index into the buffer.
-/// 
+///
 /// If too few workgroups were dispatched to adequately cover the full buffer,
 /// individual threads will reduce multiple sites.
 ///
@@ -85,7 +85,7 @@ void computeWorkgroupMeans(
 
 [shader("compute")]
 [numthreads(WORKGROUP_SIZE, 1, 1)]
-void computeMain(
+void main(
     uint3 dispatchThreadID: SV_DispatchThreadID,
     uint3 groupThreadID: SV_GroupThreadID
 ) {

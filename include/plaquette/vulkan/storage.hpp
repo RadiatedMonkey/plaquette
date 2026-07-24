@@ -2,7 +2,6 @@
 
 #include <plaquette/vulkan/device.hpp>
 #include <plaquette/vulkan/pipeline.hpp>
-#include <plaquette/vulkan/reflection.hpp>
 #include <plaquette/util.hpp>
 
 #include <memory>
@@ -210,7 +209,7 @@ namespace Plaq {
         VkDeviceMemory mMemory = VK_NULL_HANDLE;
     };
 
-    class StorageBuffer : public Resource {
+    class StorageBuffer {
     public:
         ~StorageBuffer();
 

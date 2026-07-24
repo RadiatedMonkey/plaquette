@@ -35,7 +35,7 @@ namespace Plaq {
         return mFence;
     }
 
-    void Fence::await(uint64_t timeout) {
+    void Fence::await(uint64_t timeout) const {
         LOG_VKRESULT(
             vkWaitForFences(mDevice->handle(), 1, &mFence, VK_TRUE, timeout),
             "Failed to await fence signal"

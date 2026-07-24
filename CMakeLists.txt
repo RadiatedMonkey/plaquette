@@ -38,12 +38,11 @@ set(SOURCES
     src/vulkan/device.cpp
     src/vulkan/pipeline.cpp
     src/vulkan/storage.cpp
-    src/vulkan/reflection.cpp
     src/vulkan/command.cpp
     src/vulkan/fence.cpp
+    src/vulkan/shader.cpp
     src/vulkan/spirv_reflect.c
 
-    src/simulation.cpp
     src/workloads/rand.cpp
     src/workloads/mean.cpp
 )

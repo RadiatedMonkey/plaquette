@@ -47,7 +47,7 @@ namespace Plaq::Workload {
 
     void randomWorkload(const WorkloadInfo& info, uint64_t seed) {
         PipelineConfig pipelineConfig = {
-            .shaderPath = RAND_SHADER_PATH
+            .shaderConfig = { .moduleName = "rand", .entryPoint = "main" }
         };
 
         auto cmds = info.device->createCmdBuffer();

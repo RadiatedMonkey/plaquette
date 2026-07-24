@@ -55,7 +55,7 @@ namespace Plaq::Workload {
 
     void computeUniformMean(const WorkloadInfo& info, uint64_t seed) {
         PipelineConfig pipelineConfig = {
-            .shaderPath = RAND_SHADER_PATH
+            .shaderConfig = { .moduleName = "../src/shaders/workloads/mean", .entryPoint = nullptr }
         };
 
         auto cmds = info.device->createCmdBuffer();
@@ -63,7 +63,6 @@ namespace Plaq::Workload {
 
         auto randPipeline = info.device->createPipeline(pipelineConfig);
 
-        pipelineConfig.shaderPath = MEAN_SHADER_PATH;
         auto meanPipeline = info.device->createPipeline(pipelineConfig);
 
         auto scratchBuffer = info.device->createStorageBuffer<double>(NUM_COUNT, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
