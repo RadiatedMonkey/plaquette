@@ -41,7 +41,6 @@ set(SOURCES
     src/vulkan/command.cpp
     src/vulkan/fence.cpp
     src/vulkan/shader.cpp
-    src/vulkan/spirv_reflect.c
 
     src/workloads/rand.cpp
     src/workloads/mean.cpp
